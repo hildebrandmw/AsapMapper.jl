@@ -17,5 +17,5 @@ This package is not a registered Julia package. To install, run the command
 Pkg.clone("https://github.com/hildebrandmw/AsapMapper.jl")
 ```
 
-Make sure [Mapper2](https://github.com/hildebrandmw/Mapper2.jl") is installed
+Make sure [Mapper2](https://github.com/hildebrandmw/Mapper2.jl) is installed
 as well.
