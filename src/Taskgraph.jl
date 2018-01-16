@@ -19,6 +19,21 @@ working on the Taskgraph data structure directly is likely to be much more
 convenient and will yield cleaner code.
 =#
 
+# Type for choosing the constructor.
+abstract type AbstractTaskgraphConstructor end
+
+function apply_transforms(tg, atc::AbstractTaskgraphConstructor)
+    println("Applying Transforms")
+    # Get the transforms requested by the constructor.
+    transforms = get_transforms(atc)
+    for t in transforms
+        println("Transform: ", string(t))
+        tg = t(tg)::Taskgraph
+    end
+    return tg
+end
+
+
 ################################################################################
 # Taskgraph Constructors used by the Kilocore framework.
 ################################################################################
@@ -79,7 +94,7 @@ end
 
 Return the list of transforms needed by the `SimDumpConstructor`.
 """
-function Mapper2.get_transforms(sdc::SimDumpConstructor)
+function get_transforms(sdc::SimDumpConstructor)
     transform_tuple = (
         t_unpack_attached_memories,
         t_unpack_type_strings,

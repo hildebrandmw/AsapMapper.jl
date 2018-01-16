@@ -220,8 +220,8 @@ function build_processor_tile(num_links, name = "processor_tile", include_memory
     if include_memory
         add_port(comp, "memory_in", "input")
         add_port(comp, "memory_out", "output")
-        connect_ports!(comp, "processor.memory_out", "memory_out")
-        connect_ports!(comp, "memory_in", "processor.memory_in")
+        connect_ports(comp, "processor.memory_out", "memory_out")
+        connect_ports(comp, "memory_in", "processor.memory_in")
     end
 
     # Interconnect - Don't attach metadata and let the routing routine fill in
@@ -229,9 +229,9 @@ function build_processor_tile(num_links, name = "processor_tile", include_memory
 
     # Connect outputs of muxes to the tile outputs
     for dir in directions, i = 0:num_links-1
-        mux_port = "$(dir)_mux[$i].out"
+        mux_port = "$(dir)_mux[$i].out[0]"
         tile_port = "$(dir)_out[$i]"
-        connect_ports!(comp, mux_port, tile_port)
+        connect_ports(comp, mux_port, tile_port)
     end
 
     # Circuit switch output links
@@ -239,14 +239,14 @@ function build_processor_tile(num_links, name = "processor_tile", include_memory
         # Make the name for the processor.
         proc_port = "processor.$dir[$i]"
         mux_port = "$(dir)_mux[$i].in[0]"
-        connect_ports!(comp, proc_port, mux_port)
+        connect_ports(comp, proc_port, mux_port)
     end
 
     # Connect input fifos.
     for i = 0:num_fifos-1
-        fifo_port = "fifo_mux[$i].out"
+        fifo_port = "fifo_mux[$i].out[0]"
         proc_port = "processor.fifo[$i]"
-        connect_ports!(comp, fifo_port, proc_port)
+        connect_ports(comp, fifo_port, proc_port)
     end
 
     
@@ -290,7 +290,7 @@ function build_processor_tile(num_links, name = "processor_tile", include_memory
                 index_tracker[key] += 1
             end
             # Add the connection to the component.
-            connect_ports!(comp, source_port, sink_ports)
+            connect_ports(comp, source_port, sink_ports)
         end
     end
     return comp
@@ -330,7 +330,7 @@ function build_processor(num_links,include_memory = false)
         add_port(component, str, "output", num_links)
     end
     # Add the dynamic circuit switched network
-    add_port(component, "dynamic", "output", 1)
+    add_port(component, "dynamic", "output")
     # Add memory ports. Will only be connected in the memory processor tile.
     if include_memory
         add_port(component, "memory_in", "input")
@@ -349,8 +349,8 @@ function build_memory_1port()
     metadata["attributes"] = ["memory_1port"]
     component = Component("memory_1port", primitive = "", metadata = metadata)
     # Add the input and output ports
-    add_port(component, "in[0]", "input", 1)
-    add_port(component, "out[0]", "output", 1)
+    add_port(component, "in[0]", "input")
+    add_port(component, "out[0]", "output")
     # Return the created type
     return component
 end
