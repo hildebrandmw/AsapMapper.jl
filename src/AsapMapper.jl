@@ -3,6 +3,9 @@ module AsapMapper
 using Mapper2
 using IterTools
 
+using JSON
+using GZip
+
 # Set up directory paths
 const SRCDIR = @__DIR__
 const PKGDIR = dirname(SRCDIR)
@@ -61,15 +64,14 @@ Principles of the type include:
 - attributes for components that determine mapping.
 =#
 abstract type AbstractKC <: AbstractArchitecture end
-"Basic architecture - no weights on links"
-struct KCBasic <: AbstractKC end
 "Basic architecture with link weights"
-struct KCLink  <: AbstractKC end
+struct KCStandard  <: AbstractKC end
 
 # Architectures
 include("asap4.jl")
 include("asap3.jl")
 include("generic.jl")
+include("ArchitectureTransforms.jl")
 
 # Include files
 include("Taskgraph.jl")

@@ -1,8 +1,8 @@
-function build_asap4(;A = KCBasic)
+function build_asap4(num_links = 2;A = KCStandard)
+    multiple_copies = true
     # Start with a new component - clarify that it is 2 dimensional
     arch = TopLevel{A,2}("asap4")
 
-    num_links = 2
     num_fifos = 2
     ####################
     # Normal Processor #
@@ -11,10 +11,18 @@ function build_asap4(;A = KCBasic)
     processor = build_processor_tile(num_links)
     # Instantiate it at the required addresses
     for r in 1:24, c in 2:28
-        add_child(arch, processor, Address(r,c))
+        if multiple_copies
+            add_child(arch, deepcopy(processor), Address(r,c))
+        else
+            add_child(arch, processor, Address(r,c))
+        end
     end
     for r in 1:20, c in 29
-        add_child(arch, processor, Address(r,c))
+        if multiple_copies
+            add_child(arch, deepcopy(processor), Address(r,c))
+        else
+            add_child(arch, processor, Address(r,c))
+        end
     end
 
     ####################
@@ -22,7 +30,11 @@ function build_asap4(;A = KCBasic)
     ####################
     memory_processor = build_memory_processor_tile(num_links)
     for r = 25, c = 2:28
-        add_child(arch, memory_processor, Address(r,c))
+        if multiple_copies
+            add_child(arch, deepcopy(memory_processor), Address(r,c))
+        else
+            add_child(arch, memory_processor, Address(r,c))
+        end
     end
     #################
     # 2 Port Memory #

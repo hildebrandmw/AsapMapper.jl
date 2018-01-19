@@ -1,6 +1,6 @@
 function place_and_route(input_profile, output_file, appname)
     # Build the asap4 architecture
-    arch = build_asap4(A = KCLink) 
+    arch = build_asap4(A = KCStandard) 
 
     # Construct the taskgraph from the given profile file.
     sdc  = SimDumpConstructor{false}(appname, input_profile)
@@ -22,10 +22,8 @@ function testmap()
     options = Dict{Symbol, Any}()
     println("Building Architecture")
     #arch = build_asap4()
-    #arch = build_asap4(A = KCLink)
-    #arch = build_asap3()
-    arch  = build_asap3(A = KCLink)
-    #arch = build_generic(15,16,4,initialize_dict(15,16,12), A = KCLink)
+    arch = build_asap3()
+    #arch = build_generic(15,16,4,initialize_dict(15,16,12), A = KCStandard)
     sdc   = CachedSimDump("aes")
     println("Building Taskgraph")
     taskgraph = build_taskgraph(sdc)
@@ -36,14 +34,14 @@ end
 function get_maps()
     app = "ldpc"
     # Build up the architectures to test.
-    generic_15_16_4    = build_generic(15,16,4, initialize_dict(15,16,12), A = KCLink)
-    generic_16_16_4    = build_generic(16,16,4, initialize_dict(16,16,12), A = KCLink)
-    generic_16_17_4    = build_generic(16,17,4, initialize_dict(16,17,12), A = KCLink)
-    generic_17_17_4    = build_generic(17,17,4, initialize_dict(17,17,12), A = KCLink)
-    generic_17_18_4    = build_generic(17,18,4, initialize_dict(17,18,12), A = KCLink)
-    generic_18_18_4    = build_generic(18,18,4, initialize_dict(18,18,12), A = KCLink)
-    generic_18_19_4    = build_generic(18,19,4, initialize_dict(18,19,12), A = KCLink)
-    generic_19_19_4    = build_generic(19,19,4, initialize_dict(19,19,12), A = KCLink)
+    generic_15_16_4    = build_generic(15,16,4, initialize_dict(15,16,12))
+    generic_16_16_4    = build_generic(16,16,4, initialize_dict(16,16,12))
+    generic_16_17_4    = build_generic(16,17,4, initialize_dict(16,17,12))
+    generic_17_17_4    = build_generic(17,17,4, initialize_dict(17,17,12))
+    generic_17_18_4    = build_generic(17,18,4, initialize_dict(17,18,12))
+    generic_18_18_4    = build_generic(18,18,4, initialize_dict(18,18,12))
+    generic_18_19_4    = build_generic(18,19,4, initialize_dict(18,19,12))
+    generic_19_19_4    = build_generic(19,19,4, initialize_dict(19,19,12))
 
     # Add all of the architectures to an array.
     architectures = [generic_15_16_4,

@@ -1,4 +1,5 @@
-function build_asap3(;A = KCBasic)
+function build_asap3(;A = KCStandard)
+    make_copies = true
     # Start with a new component - clarify that it is 2 dimensional
     arch = TopLevel{A,2}("asap3")
     num_links = 2
@@ -10,10 +11,18 @@ function build_asap3(;A = KCBasic)
     processor = build_processor_tile(num_links)
     # Instantiate it at the required addresses
     for r in 1:30, c in 2:33
-        add_child(arch, processor, Address(r,c))
+        if make_copies
+            add_child(arch, deepcopy(processor), Address(r,c))
+        else
+            add_child(arch, processor, Address(r,c))
+        end
     end
     for r in 31:32, c in 14:21
-        add_child(arch, processor, Address(r,c))
+        if make_copies
+            add_child(arch, deepcopy(processor), Address(r,c))
+        else
+            add_child(arch, processor, Address(r,c))
+        end
     end
 
 	####################
@@ -22,10 +31,18 @@ function build_asap3(;A = KCBasic)
 	memory_processor = build_memory_processor_tile(num_links)
 	# Instantiate it at the required addresses
 	for r = 31, c = 2:13
-        add_child(arch, memory_processor, Address(r,c))
+        if make_copies
+            add_child(arch, deepcopy(memory_processor), Address(r,c))
+        else
+            add_child(arch, memory_processor, Address(r,c))
+        end
 	end
 	for r = 31, c = 22:33
-        add_child(arch, memory_processor, Address(r,c))
+        if make_copies
+            add_child(arch, deepcopy(memory_processor), Address(r,c))
+        else
+            add_child(arch, memory_processor, Address(r,c))
+        end
 	end
 
 	#################

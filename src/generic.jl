@@ -43,7 +43,7 @@ function mem_layout(row,col,count)
 end
 
 function build_generic(row::Int64, col::Int64, lev::Int64, dict::Dict{String,Any}
-                        ;A = KCBasic, num_links = 2)
+                        ;A = KCStandard, num_links = 2)
 
     # check for memory_dict key in the bigger dictionary
     if haskey(dict, "input_handler")
