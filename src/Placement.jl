@@ -42,10 +42,6 @@ function Mapper2.canmap(::Type{T}, t::TaskgraphNode, c::Component) where {T <: A
     return issubset(t.metadata["required_attributes"], c.metadata["attributes"])
 end
 
-
-
-
-
 ################################################################################
 # Methods for architectures with link weights
 ################################################################################
@@ -55,7 +51,7 @@ struct CostSAEdge <: AbstractSAEdge
     cost    ::Float64
 end
 
-function build_sa_edge(::Type{KCStandard}, edge::TaskgraphEdge, node_dict)
+function Mapper2.Place.build_sa_edge(::Type{KCStandard}, edge::TaskgraphEdge, node_dict)
     # Build up adjacency lists.
     # Sources in the task-graphs are strings so we can just use the
     # node-dictionary to convert them into integers.
@@ -68,7 +64,7 @@ function build_sa_edge(::Type{KCStandard}, edge::TaskgraphEdge, node_dict)
 end
 
 # Costed metric functions
-function edge_cost(::Type{KCStandard}, sa::SAStruct, edge)::Float64
+function Mapper2.Place.edge_cost(::Type{KCStandard}, sa::SAStruct, edge)::Float64
     cost = 0.0
     for src in sa.edges[edge].sources, snk in sa.edges[edge].sinks
         # Get the source and sink addresses

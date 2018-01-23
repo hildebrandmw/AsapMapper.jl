@@ -53,25 +53,16 @@ const _special_attributes = Set([
 
 
 ################################################################################
-# Custrom Architecture used by this Framework
+# Custom Architecture used by this Framework
 ################################################################################
 
-#=
-Custom Abstract Architectures defined in this framework.
-Both KiloCore and Asap4 will wall in the KCArchitecture type.
-Principles of the type include:
-
-- attributes for components that determine mapping.
-=#
 abstract type AbstractKC <: AbstractArchitecture end
+struct KCNoWeight <: AbstractKC end
 "Basic architecture with link weights"
 struct KCStandard  <: AbstractKC end
 
 # Architectures
-include("asap4.jl")
-include("asap3.jl")
-include("generic.jl")
-include("ArchitectureTransforms.jl")
+include("models/models.jl")
 
 # Include files
 include("Taskgraph.jl")

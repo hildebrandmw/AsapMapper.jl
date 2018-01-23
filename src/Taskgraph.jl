@@ -77,7 +77,8 @@ function build_taskgraph(c::SimDumpConstructor)
         end
     end
     # Create the taskgraph
-    return Taskgraph(c.name, nodes, edges)
+    name = string(split(c.name, ".")[1])
+    return Taskgraph(name, nodes, edges)
 end
 
 ################################################################################
@@ -291,10 +292,10 @@ function t_assign_link_weights(tg::Taskgraph)
         # Check if any of the sources or sinks of this edge is an input.
         # if so - assign a small weight to that link
         for nodename in chain(edge.sources, edge.sinks)
-            if oneofin(tg.nodes[nodename].metadata["required_attributes"],
-                       ("input_handler", "output_handler"))
-                edge.metadata["weight"] = 1/8
-            end
+            # if oneofin(tg.nodes[nodename].metadata["required_attributes"],
+            #            ("input_handler", "output_handler"))
+            #     edge.metadata["weight"] = 1/8
+            # end
             if oneofin(tg.nodes[nodename].metadata["required_attributes"],
                        ("memory_1port","memory_2port"))
                 edge.metadata["weight"] = 3.0

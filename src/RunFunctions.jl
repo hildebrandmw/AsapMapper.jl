@@ -1,6 +1,6 @@
 function place_and_route(input_profile, output_file, appname)
     # Build the asap4 architecture
-    arch = build_asap4(A = KCStandard) 
+    arch = build_asap4(A = KCStandard)
 
     # Construct the taskgraph from the given profile file.
     sdc  = SimDumpConstructor{false}(appname, input_profile)
@@ -9,13 +9,18 @@ function place_and_route(input_profile, output_file, appname)
 
     # Build a map
     m = NewMap(arch, tg)
-    
+
     # Run Placement and routing
     m = (route ∘ place)(m)
-    
+
     # Save the placement and routing information
     dump(m, output_file)
     return nothing
+end
+
+function load_taskgraph(name)
+    constructor = CachedSimDump(name)
+    return apply_transforms(build_taskgraph(constructor), constructor)
 end
 
 function testmap()
@@ -24,95 +29,147 @@ function testmap()
     #arch = build_asap4()
     arch = build_asap3()
     #arch = build_generic(15,16,4,initialize_dict(15,16,12), A = KCStandard)
-    sdc   = CachedSimDump("aes")
-    println("Building Taskgraph")
-    taskgraph = build_taskgraph(sdc)
-    tg    = apply_transforms(taskgraph, sdc)
+    tg = load_taskgraph("aes")
     return NewMap(arch, tg)
 end
 
-function get_maps()
-    app = "ldpc"
-    # Build up the architectures to test.
-    generic_15_16_4    = build_generic(15,16,4, initialize_dict(15,16,12))
-    generic_16_16_4    = build_generic(16,16,4, initialize_dict(16,16,12))
-    generic_16_17_4    = build_generic(16,17,4, initialize_dict(16,17,12))
-    generic_17_17_4    = build_generic(17,17,4, initialize_dict(17,17,12))
-    generic_17_18_4    = build_generic(17,18,4, initialize_dict(17,18,12))
-    generic_18_18_4    = build_generic(18,18,4, initialize_dict(18,18,12))
-    generic_18_19_4    = build_generic(18,19,4, initialize_dict(18,19,12))
-    generic_19_19_4    = build_generic(19,19,4, initialize_dict(19,19,12))
-
-    # Add all of the architectures to an array.
-    architectures = [generic_15_16_4,
-                     generic_16_16_4,
-                     generic_16_17_4,
-                     generic_17_17_4,
-                     generic_17_18_4,
-                     generic_18_18_4,
-                     generic_18_19_4,
-                     generic_19_19_4]
-
-    # Give names to each of the architectures - append the app name to
-    # the front
-    save_names = "$(app)_" .* ["generic_15_16_4",
-                               "generic_16_16_4",
-                               "generic_16_17_4",
-                               "generic_17_17_4",
-                               "generic_17_18_4",
-                               "generic_18_18_4",
-                               "generic_18_19_4",
-                               "generic_19_19_4"]
-
-    # Build the taskgraphs
-    taskgraph_constructor = SimDumpConstructor(app)
-    debug_print(:start, "Building Taskgraph\n")
-    taskgraph = Taskgraph(taskgraph_constructor)
-    taskgraph = apply_transforms(taskgraph, taskgraph_constructor)
-
-    # Build the maps for each architecture/taskgraph pair.
-    maps = NewMap.(architectures, taskgraph)
-
-    return maps, save_names
+function run_wrapper(arch_fun,
+                     args,
+                     taskgraph::Taskgraph,
+                     place_kwargs = Dict{Symbol,Any}())
+    # Build architecture
+    arch = arch_fun(args...)
+    # Construct map object
+    m = NewMap(arch, taskgraph)
+    # Run placement
+    m = place(m; place_kwargs...)
+    # Run routing
+    m = route(m)
+    return m
 end
 
+function mapping(args...)
+    stats_dict = Dict{String,Any}()
+    # Scope map object out of the try-catch block
+    try
+        m = run_wrapper(args...)
+        stats_dict["success"] = true
+        # Get statistics from the mapping.
 
-function bulk_run()
-    maps, save_names = get_maps()
+        # Returns a histogram dictionary where keys are the hop distances and
+        # values are the number of communication links of that distance
+        histogram = Mapper2.MapType.global_link_histogram(m)
+        # Total number of global routing links used.
+        num_links = sum(values(histogram))
+        global_links = sum(k*v for (k,v) in histogram)
+        # Get the average link length
+        average_length = global_links / num_links
+        max_length = maximum(keys(histogram))
+        # Construct a weighted number of links based on the product of the link
+        # length and the number of writes made on a link.
+        weighted_objective = 0
+        for (taskgraph_link, mapped_link) in zip(m.taskgraph.edges, m.mapping.edges)
+            # Get the number of global routing links used
+            link_count = Mapper2.MapType.count_global_links(mapped_link)
+            weight = taskgraph_link.metadata["num_writes"]
+            weighted_objective += link_count * weight
+        end
 
-    # Build an anonymous function to allow finer control of the placement
-    # function.
-    place_algorithm = m -> place(m,
-          move_attempts = 500000,
-          warmer = DefaultSAWarm(0.95, 1.1, 0.99),
-          cooler = DefaultSACool(0.998),
-         )
-
-    # Execute the parallel run
-    routed_maps = parallel_run(maps, save_names, place_algorithm = place_algorithm)
-
-    return routed_maps
-end
-
-"""
-    parallel_run(maps, save_names)
-
-Place and route the given collection of maps in parallel. After routing,
-all maps will be saved according to the respective entry in `save_names`.
-"""
-function parallel_run(maps, save_names; place_algorithm = m -> place(m))
-    # Parallel Placement
-    placed = pmap(place_algorithm, maps)
-    # Parallel Routing
-    routed = pmap(m -> route(m), placed)
-    # Print out statistic for each run - also save everything.
-    print_with_color(:yellow, "Run Statistics\n")
-    for (m, name) in zip(routed, save_names)
-        print_with_color(:light_cyan, name, "\n")
-        report_routing_stats(m)
-        save(m, name)
+        # Record results in the dictionary
+        stats_dict["global_links"] = global_links
+        stats_dict["average_length"] = average_length
+        stats_dict["max_length"] = max_length
+        stats_dict["weighted_objective"] = weighted_objective
+        return stats_dict
+    # Catch un-routable placements.
+    catch e
+        print_with_color(:red, e, "\n")
+        stats_dict["success"] = false
+        return stats_dict
     end
-    return routed
+end
+
+struct Test
+    args::Any
+    num_runs::Int64
+    metadata::Dict{String,Any}
+end
+
+function run(t::Test)
+    # Get the specified number of sample runs.
+    prefiltered_data = pmap(m -> mapping(t.args...), 1:t.num_runs)
+    # Filter out any runs that failed.
+    data = collect(filter(x -> x["success"], prefiltered_data))
+    # Add fields to the metadata.
+    t.metadata["architecture"]      = string(t.args[1])
+    t.metadata["architecture_args"] = t.args[2]
+    t.metadata["taskgraph"]         = t.args[3].name
+    t.metadata["placement_args"]    = t.args[4]
+    t.metadata["num_runs"]          = t.num_runs
+    # Create a dictionary storing all the results.
+    summary = Dict(
+        "data" => data,
+        "meta" => t.metadata
+    )
+    return summary
+end
+
+function bulk_test(num_runs)
+    tests = []
+    # Test AlexNet on KiloCore 2 - weighted links
+    let
+        arch = build_asap4
+        arch_args = (2,KCStandard)
+        tg   = load_taskgraph("alexnet")
+        # Placement arguments
+        place_args = Dict{Symbol,Any}(
+            :move_attempts  => 500000,
+            :warmer         => Mapper2.Place.DefaultSAWarm(0.95, 1.1, 0.99),
+            :cooler         => Mapper2.Place.DefaultSACool(0.98),
+        )
+
+        args = (arch, arch_args, tg, place_args)
+        new_test = Test(args, num_runs, Dict{String,Any}())
+        push!(tests, new_test)
+    end
+    # Test AlexNet on KiloCore 2 - unweighted links
+    let
+        arch = build_asap4
+        arch_args = (2,KCNoWeight)
+        tg   = load_taskgraph("alexnet")
+        # Placement arguments
+        place_args = Dict{Symbol,Any}(
+            :move_attempts  => 500000,
+            :warmer         => Mapper2.Place.DefaultSAWarm(0.95, 1.1, 0.99),
+            :cooler         => Mapper2.Place.DefaultSACool(0.98),
+        )
+
+        args = (arch, arch_args, tg, place_args)
+        new_test = Test(args, num_runs, Dict{String,Any}())
+        push!(tests, new_test)
+    end
+
+    results_array = []
+    for t in tests
+        results = run(t)
+        save(results)
+        push!(results_array, results)
+    end
+    return results_array
+end
+
+function save(d)
+    # Make a name for the saved dictionary.
+    args_string = join(d["meta"]["architecture_args"],"_")
+    name = join([
+        d["meta"]["taskgraph"],
+        d["meta"]["architecture"],
+        args_string,
+        "json.gz"],
+        "_", ".")
+    f = GZip.open(joinpath(PKGDIR, "results", name), "w")
+    JSON.print(f, d, 2)
+    close(f)
 end
 
 function slow_run(m)

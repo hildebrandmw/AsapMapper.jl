@@ -1,4 +1,4 @@
-function build_asap4(num_links = 2;A = KCStandard)
+function build_asap4(num_links, A)
     multiple_copies = true
     # Start with a new component - clarify that it is 2 dimensional
     arch = TopLevel{A,2}("asap4")
