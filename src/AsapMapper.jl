@@ -10,6 +10,8 @@ using GZip
 const SRCDIR = @__DIR__
 const PKGDIR = dirname(SRCDIR)
 
+include("Plots.jl")
+
 #=
 Framework for the Kilocore project using the rest of the Mapper infrastructure.
 

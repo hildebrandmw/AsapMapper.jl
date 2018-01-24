@@ -27,8 +27,8 @@ function testmap()
     options = Dict{Symbol, Any}()
     println("Building Architecture")
     #arch = build_asap4()
-    arch = build_asap3()
-    #arch = build_generic(15,16,4,initialize_dict(15,16,12), A = KCStandard)
+    #arch = build_asap3()
+    arch = build_generic(16,16,4,initialize_dict(16,16,12), KCStandard)
     tg = load_taskgraph("aes")
     return NewMap(arch, tg)
 end
@@ -53,7 +53,8 @@ function mapping(args...)
     # Scope map object out of the try-catch block
     try
         m = run_wrapper(args...)
-        stats_dict["success"] = true
+
+        stats_dict["success"] = m.metadata["routing_success"]
         # Get statistics from the mapping.
 
         # Returns a histogram dictionary where keys are the hop distances and
@@ -116,37 +117,55 @@ end
 
 function bulk_test(num_runs)
     tests = []
+    # Common arguments across all runs
+    place_args = Dict{Symbol,Any}(
+        :move_attempts  => 500000,
+        :warmer         => Mapper2.Place.DefaultSAWarm(0.95, 1.1, 0.99),
+        :cooler         => Mapper2.Place.DefaultSACool(0.99),
+    )
     # Test AlexNet on KiloCore 2 - weighted links
+    # let
+    #     for (A,nl) in Iterators.product((KCStandard, KCNoWeight), 2:4)
+    #         arch = build_asap4
+    #         # Check architecture variations
+    #         arch_args = (nl,A)
+    #         tg   = load_taskgraph("alexnet")
+    #         args = (arch, arch_args, tg, place_args)
+    #         new_test = Test(args, num_runs, Dict{String,Any}())
+    #         push!(tests, new_test)
+    #     end
+    # end
     let
-        arch = build_asap4
-        arch_args = (2,KCStandard)
-        tg   = load_taskgraph("alexnet")
-        # Placement arguments
-        place_args = Dict{Symbol,Any}(
-            :move_attempts  => 500000,
-            :warmer         => Mapper2.Place.DefaultSAWarm(0.95, 1.1, 0.99),
-            :cooler         => Mapper2.Place.DefaultSACool(0.98),
-        )
-
-        args = (arch, arch_args, tg, place_args)
-        new_test = Test(args, num_runs, Dict{String,Any}())
-        push!(tests, new_test)
+        apps    = ("sort", "ldpc", "aes", "fft")
+        archs   = (KCStandard, KCNoWeight)
+        for (A,app) in Iterators.product(archs, apps)
+            arch = build_generic
+            # Check architecture variations
+            arch_args = (16,16,4,initialize_dict(16,16,4),A)
+            tg   = load_taskgraph(app)
+            local_place_args = Dict{Symbol,Any}(
+                :move_attempts  => 500000,
+                :warmer         => Mapper2.Place.DefaultSAWarm(0.95, 1.1, 0.99),
+                :cooler         => Mapper2.Place.DefaultSACool(0.9),
+            )
+            args = (arch, arch_args, tg, local_place_args)
+            new_test = Test(args, num_runs, Dict{String,Any}())
+            push!(tests, new_test)
+        end
     end
-    # Test AlexNet on KiloCore 2 - unweighted links
     let
-        arch = build_asap4
-        arch_args = (2,KCNoWeight)
-        tg   = load_taskgraph("alexnet")
-        # Placement arguments
-        place_args = Dict{Symbol,Any}(
-            :move_attempts  => 500000,
-            :warmer         => Mapper2.Place.DefaultSAWarm(0.95, 1.1, 0.99),
-            :cooler         => Mapper2.Place.DefaultSACool(0.98),
-        )
-
-        args = (arch, arch_args, tg, place_args)
-        new_test = Test(args, num_runs, Dict{String,Any}())
-        push!(tests, new_test)
+        apps    = ("aes", "fft")
+        archs   = (KCStandard, KCNoWeight)
+        links   = 2:4
+        for (A,nl,app) in Iterators.product(archs, links, apps)
+            arch = build_asap3
+            # Check architecture variations
+            arch_args = (nl,A)
+            tg   = load_taskgraph(app)
+            args = (arch, arch_args, tg, place_args)
+            new_test = Test(args, num_runs, Dict{String,Any}())
+            push!(tests, new_test)
+        end
     end
 
     results_array = []
@@ -160,7 +179,7 @@ end
 
 function save(d)
     # Make a name for the saved dictionary.
-    args_string = join(d["meta"]["architecture_args"],"_")
+    args_string = join(d["meta"]["architecture_args"][1:2],"_")
     name = join([
         d["meta"]["taskgraph"],
         d["meta"]["architecture"],

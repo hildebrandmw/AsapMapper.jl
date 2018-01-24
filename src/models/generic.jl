@@ -5,8 +5,6 @@ function initialize_dict(r,c,n)
     # move to a bigger dict
     dict["memory_dict"] = mem_dict
     dict["input_handler"] = 1
-    debug_print(:info, "Generic Architecture Initialization Dictionary:\n")
-    DEBUG && display(dict)
     return dict
 end
 
@@ -42,8 +40,12 @@ function mem_layout(row,col,count)
     return mem_dict
 end
 
-function build_generic(row::Int64, col::Int64, lev::Int64, dict::Dict{String,Any}
-                        ;A = KCStandard, num_links = 2)
+function build_generic(row::Int64, 
+                       col::Int64, 
+                       lev::Int64, 
+                       dict::Dict{String,Any},
+                       A = KCStandard; 
+                       num_links = 2)
 
     # check for memory_dict key in the bigger dictionary
     if haskey(dict, "input_handler")
@@ -142,11 +144,6 @@ end
 ##############################
 #        PROCESSOR
 ##############################
-"""
-    build_processor()
-
-Build a simple processor.
-"""
 function build_processor_generic(dimension::Int64,
 directions::Tuple{NTuple{4,String},NTuple{6,String}})
 
@@ -162,7 +159,7 @@ directions::Tuple{NTuple{4,String},NTuple{6,String}})
         add_port(component, dir, "output", 2)
     end
     # Add the dynamic circuit switched network
-    add_port(component, "dynamic", "output", 1)
+    add_port(component, "dynamic", "output")
     # Add memory ports. Will only be connected in the memory processor tile.
     add_port(component, "memory_in", "input")
     add_port(component, "memory_out", "output")
@@ -210,25 +207,25 @@ directions::Tuple{NTuple{4,String},NTuple{6,String}})
 
     # Interconnect - Don't attach metadata and let the routing routine fill in
     # defaults to intra-tile routing.
-    connect_ports!(comp, "processor.memory_out", "memory_out")
-    connect_ports!(comp, "memory_in", "processor.memory_in")
+    connect_ports(comp, "processor.memory_out", "memory_out")
+    connect_ports(comp, "memory_in", "processor.memory_in")
 
     # Connect outputs of muxes to the tile outputs
     for dir in directions[dimension-1], i = 0:num_links-1
-        mux_port = join((dir, "_mux[",string(i),"].out"))
+        mux_port = join((dir, "_mux[",string(i),"].out[0]"))
         tile_port = join((dir, "_out[",string(i),"]"))
-        connect_ports!(comp, mux_port, tile_port)
+        connect_ports(comp, mux_port, tile_port)
     end
     # Circuit switch output links
     for dir in directions[dimension-1], i = 0:num_links-1
         processor_port = join(("processor.",dir,"[",string(i),"]"))
         mux_port = join((dir, "_mux[",string(i),"].in[0]"))
-        connect_ports!(comp,processor_port,mux_port)
+        connect_ports(comp,processor_port,mux_port)
     end
 
     # Input Links
-    connect_ports!(comp, "fifo_mux[0].out", ["processor.fifo[0]"])
-    connect_ports!(comp, "fifo_mux[1].out", ["processor.fifo[1]"])
+    connect_ports(comp, "fifo_mux[0].out[0]", ["processor.fifo[0]"])
+    connect_ports(comp, "fifo_mux[1].out[0]", ["processor.fifo[1]"])
     # Connect input ports to inputs of muxes
     dir_count = 0
     fifo_count = 0
@@ -250,7 +247,7 @@ directions::Tuple{NTuple{4,String},NTuple{6,String}})
             end
             push!(sink_ports,join(("fifo_mux[0].in[",string(fifo_count-1),"]")))
             push!(sink_ports,join(("fifo_mux[1].in[",string(fifo_count-1),"]")))
-            connect_ports!(comp, tile_port, sink_ports)
+            connect_ports(comp, tile_port, sink_ports)
         end
     end
     return comp
@@ -277,10 +274,10 @@ function connect_processors_generic(tl,dimension)
     dst_rule = src_rule
     # Create offset rules.
     # Offsets are just unit steps in four directions.
-    offsets2d = [Address{3}(-1,0,0), Address{3}(1,0,0), Address{3}(0,1,0),
-                Address{3}(0,-1,0)]
-    offsets3d = [Address{3}(-1,0,0), Address{3}(1,0,0), Address{3}(0,1,0),
-                Address{3}(0,-1,0), Address{3}(0,0,1), Address(0,0,-1)]
+    offsets2d = [Address(-1,0,0), Address(1,0,0), Address(0,1,0),
+                Address(0,-1,0)]
+    offsets3d = [Address(-1,0,0), Address(1,0,0), Address(0,1,0),
+                Address(0,-1,0), Address(0,0,1), Address(0,0,-1)]
     offsets = (offsets2d,offsets3d)
     #=
     Create two tuples for the source ports and destination ports. In general,
@@ -316,7 +313,7 @@ function connect_processors_generic(tl,dimension)
     src_dirs = ("east","west")
     dst_dirs = ("west","east")
     # Links can go both directions, so make the offsets an array
-    offsets = [Address{3}(0,1,0), Address{3}(0,-1,0)]
+    offsets = [Address(0,1,0), Address(0,-1,0)]
     for (offset, src, dst) in zip(offsets, src_dirs, dst_dirs)
         src_ports = String[]
         dst_ports = String[]
@@ -368,26 +365,26 @@ function connect_memories_generic(tl)
     mem_rule = PortRule(mem_key, mem_val, mem_fn)
     # Make connections from memory to memory-processors
     offset_rules = OffsetRule[]
-    push!(offset_rules, OffsetRule(Address{3}(-1, 0,0), "out[0]", "memory_in"))
-    push!(offset_rules, OffsetRule(Address{3}(-1, 1,0), "out[1]", "memory_in"))
-    push!(offset_rules, OffsetRule(Address{3}( 1, 0,0), "out[0]", "memory_in"))
-    push!(offset_rules, OffsetRule(Address{3}( 1, 1,0), "out[1]", "memory_in"))
-    push!(offset_rules, OffsetRule(Address{3}( 0, 1,0), "out[0]", "memory_in"))
-    push!(offset_rules, OffsetRule(Address{3}( 1, 1,0), "out[1]", "memory_in"))
-    push!(offset_rules, OffsetRule(Address{3}( 0,-1,0), "out[0]", "memory_in"))
-    push!(offset_rules, OffsetRule(Address{3}( 1,-1,0), "out[1]", "memory_in"))
+    push!(offset_rules, OffsetRule(Address(-1, 0,0), "out[0]", "memory_in"))
+    push!(offset_rules, OffsetRule(Address(-1, 1,0), "out[1]", "memory_in"))
+    push!(offset_rules, OffsetRule(Address( 1, 0,0), "out[0]", "memory_in"))
+    push!(offset_rules, OffsetRule(Address( 1, 1,0), "out[1]", "memory_in"))
+    push!(offset_rules, OffsetRule(Address( 0, 1,0), "out[0]", "memory_in"))
+    push!(offset_rules, OffsetRule(Address( 1, 1,0), "out[1]", "memory_in"))
+    push!(offset_rules, OffsetRule(Address( 0,-1,0), "out[0]", "memory_in"))
+    push!(offset_rules, OffsetRule(Address( 1,-1,0), "out[1]", "memory_in"))
     connection_rule(tl, offset_rules, mem_rule, proc_rule, metadata = metadata)
 
     # Make connections from memory-processors to memories.
     offset_rules = OffsetRule[]
-    push!(offset_rules, OffsetRule(Address{3}( 1, 0,0), "memory_out", "in[0]"))
-    push!(offset_rules, OffsetRule(Address{3}( 1,-1,0), "memory_out", "in[1]"))
-    push!(offset_rules, OffsetRule(Address{3}(-1, 0,0), "memory_out", "in[0]"))
-    push!(offset_rules, OffsetRule(Address{3}(-1,-1,0), "memory_out", "in[1]"))
-    push!(offset_rules, OffsetRule(Address{3}( 0,-1,0), "memory_out", "in[0]"))
-    push!(offset_rules, OffsetRule(Address{3}(-1,-1,0), "memory_out", "in[1]"))
-    push!(offset_rules, OffsetRule(Address{3}( 0, 1,0), "memory_out", "in[0]"))
-    push!(offset_rules, OffsetRule(Address{3}(-1, 1,0), "memory_out", "in[1]"))
+    push!(offset_rules, OffsetRule(Address( 1, 0,0), "memory_out", "in[0]"))
+    push!(offset_rules, OffsetRule(Address( 1,-1,0), "memory_out", "in[1]"))
+    push!(offset_rules, OffsetRule(Address(-1, 0,0), "memory_out", "in[0]"))
+    push!(offset_rules, OffsetRule(Address(-1,-1,0), "memory_out", "in[1]"))
+    push!(offset_rules, OffsetRule(Address( 0,-1,0), "memory_out", "in[0]"))
+    push!(offset_rules, OffsetRule(Address(-1,-1,0), "memory_out", "in[1]"))
+    push!(offset_rules, OffsetRule(Address( 0, 1,0), "memory_out", "in[0]"))
+    push!(offset_rules, OffsetRule(Address(-1, 1,0), "memory_out", "in[1]"))
     connection_rule(tl, offset_rules, proc_rule, mem_rule, metadata = metadata)
 
     ###########################
@@ -398,11 +395,11 @@ function connect_memories_generic(tl)
     mem_rule = PortRule(mem_key, mem_val, mem_fn)
     # Make connections from memory to memory-processors
     offset_rules = OffsetRule[]
-    push!(offset_rules, OffsetRule(Address{3}(-1,0,0), "out[0]", "memory_in"))
+    push!(offset_rules, OffsetRule(Address(-1,0,0), "out[0]", "memory_in"))
     connection_rule(tl, offset_rules, mem_rule, proc_rule, metadata = metadata)
     # Make connections from memory-processors to memories.
     offset_rules = OffsetRule[]
-    push!(offset_rules, OffsetRule(Address{3}(1,0,0), "memory_out", "in[0]"))
+    push!(offset_rules, OffsetRule(Address(1,0,0), "memory_out", "in[0]"))
     connection_rule(tl, offset_rules, proc_rule, mem_rule, metadata = metadata)
 
     return nothing
