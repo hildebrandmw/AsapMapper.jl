@@ -1,59 +1,129 @@
-function place_and_route(input_profile, output_file, appname)
-    # Build the asap4 architecture
-    arch = build_asap4(A = KCStandard)
+################################################################################
+# MAIN PLACE AND ROUTE FUNCTION
+################################################################################
+function place_and_route(architecture, profile_path, dump_path)
+    # Initialize an uncompressed taskgraph constructor
+    tc = SimDumpConstructor{false}("blank", profile_path)
+    t = build_taskgraph(tc)
 
-    # Construct the taskgraph from the given profile file.
-    sdc  = SimDumpConstructor{false}(appname, input_profile)
-    taskgraph = Taskgraph(sdc)
-    tg = apply_transforms(taskgraph, sdc)
+    # Dispatch architecture
+    if architecture == "asap4"
+        a = build_asap4(2, KCStandard)
+    elseif architecture == "asap3"
+        a = build_asap3(2, KCNoWeight)
+    else
+        KeyError("Architecture $architecture not implemented.")
+    end
 
-    # Build a map
-    m = NewMap(arch, tg)
+    # Build the Map
+    m = NewMap(a, t)
 
-    # Run Placement and routing
-    m = (route ∘ place)(m)
+    # Run placement
+    m = place(m)
 
-    # Save the placement and routing information
-    dump(m, output_file)
-    return nothing
+    # Run Routing
+    m = route(m)
+
+    # Dump mapping to given dump path
+    Mapper2.save(m, dump_path, false)
 end
 
 function load_taskgraph(name)
     constructor = CachedSimDump(name)
-    return apply_transforms(build_taskgraph(constructor), constructor)
+    return build_taskgraph(constructor)
 end
 
 function testmap()
     options = Dict{Symbol, Any}()
     println("Building Architecture")
-    #arch = build_asap4()
+    arch = build_asap4(2, KCStandard)
     #arch = build_asap3()
-    arch = build_generic(16,16,4,initialize_dict(16,16,12), KCStandard)
-    tg = load_taskgraph("aes")
+    #arch = build_generic(16,16,4,initialize_dict(16,16,12), KCStandard)
+    tg = load_taskgraph("alexnet")
     return NewMap(arch, tg)
 end
 
-function run_wrapper(arch_fun,
-                     args,
-                     taskgraph::Taskgraph,
-                     place_kwargs = Dict{Symbol,Any}())
-    # Build architecture
-    arch = arch_fun(args...)
-    # Construct map object
-    m = NewMap(arch, taskgraph)
-    # Run placement
-    m = place(m; place_kwargs...)
-    # Run routing
-    m = route(m)
-    return m
+struct PlacementTest
+    arch_constructor::Function
+    arch_args       ::Vector{Any}
+    taskgraph       ::Taskgraph
+    place_kwargs    ::Dict{Symbol,Any}
+    num_placements  ::Int64
+    metadata        ::Dict{String,Any}
 end
 
-function mapping(args...)
-    stats_dict = Dict{String,Any}()
-    # Scope map object out of the try-catch block
-    try
-        m = run_wrapper(args...)
+function run(t::PlacementTest)
+    # Make closure for doing the bulk placement.
+    f(x) = generate_placement(t.arch_constructor,
+                              first(t.arch_args),
+                              t.taskgraph,
+                              t.place_kwargs,
+                              x)
 
+    # Get the specified number of sample runs.
+    pmap(i -> f(i), 1:t.num_placements)
+
+    # Iterate through all the architecture arguments, route each of the 
+    # placements generated previously
+    for arch_arg in t.arch_args
+        g(x) = run_routing(t.arch_constructor,
+                           arch_arg,
+                           t.taskgraph,
+                           x)
+        pre_data = pmap(i -> g(i), 1:t.num_placements)
+        data = collect(filter(x -> x["success"], pre_data))
+        # Collect results
+        metadata = Dict(
+            "architecture"      => string(t.arch_constructor),
+            "architecture_args" => arch_arg,
+            "taskgraph"         => t.taskgraph.name,
+            "placement_args"    => t.place_kwargs,
+            "num_placements"    => t.num_placements,
+        )
+
+        summary = Dict(
+            "data" => data,
+            "meta" => metadata,
+        )
+
+        save(summary)
+    end
+end
+
+function generate_placement(arch_constructor, 
+                            arch_args, 
+                            taskgraph::Taskgraph,
+                            place_kwargs,
+                            iter::Int)
+    # Build Architecture
+    arch = arch_constructor(arch_args...)
+    # Construct a new Map object
+    m = NewMap(arch, taskgraph)
+    # Run Placement
+    m = place(m; place_kwargs...)
+    # Save the resulting placement to file.
+    save_path = joinpath(PKGDIR, "saved", string(iter))
+    Mapper2.MapType.save(m, save_path)
+    return nothing
+end
+
+function run_routing(arch_constructor,
+                     arch_args,
+                     taskgraph::Taskgraph,
+                     iter::Int)
+    
+    # Build Architecture
+    arch = arch_constructor(arch_args...)
+    # Construct a new Map object
+    m = NewMap(arch, taskgraph)
+    # Load placement from file
+    load_path = joinpath(PKGDIR, "saved", string(iter))
+    Mapper2.MapType.load(m, load_path)
+
+    # Begin routing
+    stats_dict = Dict{String,Any}()
+    try
+        m = route(m)
         stats_dict["success"] = m.metadata["routing_success"]
         # Get statistics from the mapping.
 
@@ -90,91 +160,55 @@ function mapping(args...)
     end
 end
 
-struct Test
-    args::Any
-    num_runs::Int64
-    metadata::Dict{String,Any}
-end
-
-function run(t::Test)
-    # Get the specified number of sample runs.
-    prefiltered_data = pmap(m -> mapping(t.args...), 1:t.num_runs)
-    # Filter out any runs that failed.
-    data = collect(filter(x -> x["success"], prefiltered_data))
-    # Add fields to the metadata.
-    t.metadata["architecture"]      = string(t.args[1])
-    t.metadata["architecture_args"] = t.args[2]
-    t.metadata["taskgraph"]         = t.args[3].name
-    t.metadata["placement_args"]    = t.args[4]
-    t.metadata["num_runs"]          = t.num_runs
-    # Create a dictionary storing all the results.
-    summary = Dict(
-        "data" => data,
-        "meta" => t.metadata
-    )
-    return summary
-end
-
 function bulk_test(num_runs)
     tests = []
     # Common arguments across all runs
-    place_args = Dict{Symbol,Any}(
+    place_kwargs = Dict{Symbol,Any}(
         :move_attempts  => 500000,
         :warmer         => Mapper2.Place.DefaultSAWarm(0.95, 1.1, 0.99),
         :cooler         => Mapper2.Place.DefaultSACool(0.99),
     )
     # Test AlexNet on KiloCore 2 - weighted links
-    # let
-    #     for (A,nl) in Iterators.product((KCStandard, KCNoWeight), 2:4)
-    #         arch = build_asap4
-    #         # Check architecture variations
-    #         arch_args = (nl,A)
-    #         tg   = load_taskgraph("alexnet")
-    #         args = (arch, arch_args, tg, place_args)
-    #         new_test = Test(args, num_runs, Dict{String,Any}())
-    #         push!(tests, new_test)
-    #     end
-    # end
     let
-        apps    = ("sort", "ldpc", "aes", "fft")
-        archs   = (KCStandard, KCNoWeight)
-        for (A,app) in Iterators.product(archs, apps)
-            arch = build_generic
+        for A in (KCStandard, KCNoWeight)
+            arch = build_asap4
             # Check architecture variations
-            arch_args = (16,16,4,initialize_dict(16,16,4),A)
-            tg   = load_taskgraph(app)
-            local_place_args = Dict{Symbol,Any}(
-                :move_attempts  => 500000,
-                :warmer         => Mapper2.Place.DefaultSAWarm(0.95, 1.1, 0.99),
-                :cooler         => Mapper2.Place.DefaultSACool(0.9),
-            )
-            args = (arch, arch_args, tg, local_place_args)
-            new_test = Test(args, num_runs, Dict{String,Any}())
+            arch_args = [(nlinks,A) for nlinks in 2:6]
+            tg        = load_taskgraph("alexnet")
+
+            new_test  = PlacementTest(arch,
+                                      arch_args,
+                                      tg,
+                                      place_kwargs,
+                                      num_runs,
+                                      Dict{String,Any}())
             push!(tests, new_test)
         end
     end
     let
-        apps    = ("aes", "fft")
+        apps    = ("aes", "fft", "sort", "ldpc")
         archs   = (KCStandard, KCNoWeight)
-        links   = 2:4
-        for (A,nl,app) in Iterators.product(archs, links, apps)
+        for (A,app) in Iterators.product(archs, apps)
             arch = build_asap3
             # Check architecture variations
-            arch_args = (nl,A)
+            arch_args = [(nlinks,A) for nlinks in 2:6]
             tg   = load_taskgraph(app)
-            args = (arch, arch_args, tg, place_args)
-            new_test = Test(args, num_runs, Dict{String,Any}())
+
+            new_test = PlacementTest(arch,
+                                     arch_args,
+                                     tg,
+                                     place_kwargs,
+                                     num_runs,
+                                     Dict{String,Any}())
+
             push!(tests, new_test)
         end
     end
 
-    results_array = []
     for t in tests
-        results = run(t)
-        save(results)
-        push!(results_array, results)
+        run(t)
     end
-    return results_array
+    return nothing
 end
 
 function save(d)
