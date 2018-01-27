@@ -1,3 +1,7 @@
+# Hack to make the AsapMapper directory findable.
+push!(LOAD_PATH, joinpath(pwd(), ".."))
+push!(LOAD_PATH, joinpath(pwd(), "..", ".."))
+
 using ArgParse
 using AsapMapper
 
