@@ -169,22 +169,22 @@ function bulk_test(num_runs)
         :cooler         => Mapper2.Place.DefaultSACool(0.99),
     )
     # Test AlexNet on KiloCore 2 - weighted links
-    let
-        for A in (KCStandard, KCNoWeight)
-            arch = build_asap4
-            # Check architecture variations
-            arch_args = [(nlinks,A) for nlinks in 2:6]
-            tg        = load_taskgraph("alexnet")
+    # let
+    #     for A in (KCStandard, KCNoWeight)
+    #         arch = build_asap4
+    #         # Check architecture variations
+    #         arch_args = [(nlinks,A) for nlinks in 2:6]
+    #         tg        = load_taskgraph("alexnet")
 
-            new_test  = PlacementTest(arch,
-                                      arch_args,
-                                      tg,
-                                      place_kwargs,
-                                      num_runs,
-                                      Dict{String,Any}())
-            push!(tests, new_test)
-        end
-    end
+    #         new_test  = PlacementTest(arch,
+    #                                   arch_args,
+    #                                   tg,
+    #                                   place_kwargs,
+    #                                   num_runs,
+    #                                   Dict{String,Any}())
+    #         push!(tests, new_test)
+    #     end
+    # end
     let
         apps    = ("aes", "fft", "sort", "ldpc")
         archs   = (KCStandard, KCNoWeight)
