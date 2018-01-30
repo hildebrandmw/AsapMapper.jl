@@ -7,23 +7,37 @@ isapp(d, app)   = d["meta"]["taskgraph"] == app
 isnlinks(d, n)  = d["meta"]["architecture_args"][1] == n
 ismode(d, mode) = d["meta"]["architecture_args"][2] == "AsapMapper.$mode"
 
+function make_print_name(d::Dict)
+    arch  = strip_asap(d["meta"]["architecture"])
+    arch_arg_strings = reverse(strip_asap.(string.(d["meta"]["architecture_args"])))
+    arch_args = join(arch_arg_strings, "_")
+    name = join((arch, arch_args), " ")
+    return name
+end
+
 function data_lt(a,b)
-    if a["meta"]["architecture_args"][2] < b["meta"]["architecture_args"][2]
-        return true
-    elseif a["meta"]["architecture_args"][2] == b["meta"]["architecture_args"][2]
-        return a["meta"]["architecture_args"][1] < b["meta"]["architecture_args"][1]
-    end
-    return false
+    a_name = make_print_name(a)
+    b_name = make_print_name(b)
+    return a_name < b_name
 end
 
 function plot_results(filter, field)
     dicts = [] 
-    for file in readdir(joinpath(PKGDIR, "results"))
-        f = GZip.open(joinpath(PKGDIR, "results", file), "r")
-        d = JSON.parse(f)
-        close(f)
-        if filter(d)
-            push!(dicts, d)
+    # Walk through all results files, reading the dictionary. Apply the filter
+    # to the dictionary. If it passes, add the dictionary to the `dicts` array
+    # for downstream plotting.
+    for (root, ~, files) in walkdir(RESULTS_DIR), file in files
+        filepath = joinpath(root, file)
+        try
+            f = GZip.open(filepath, "r")
+            j = JSON.parse(f)
+            close(f)
+            if filter(j)
+                push!(dicts, j)
+                println("Using: ", filepath)
+            end
+        catch
+            print_with_color(:red, "Error opening: ", filepath, "\n")
         end
     end
 
@@ -31,16 +45,19 @@ function plot_results(filter, field)
     # Plot all the dictionaries
     datasets = []
     series   = String[]
-    for d in dicts
+    first = true
+    for (i,d) in enumerate(dicts)
         data = [i[field] for i in d["data"]]
         push!(datasets, data)
         # Construct the series name for the set
-        arch_type = string(split(d["meta"]["architecture_args"][2], ".")[end])
-        num_links = d["meta"]["architecture_args"][1]
-        series_name = "$arch_type $num_links"
+        series_name = make_print_name(d)
         push!(series, series_name)
     end
     # Convert the array of arrays into a 2D array
     println(series)
-    boxplot(1:length(datasets), datasets,label = series)
+    boxplot(1:length(datasets), datasets, 
+            label = series,
+            legendfont = font(4, "Courier"),
+            legend = :bottomleft,
+           )
 end

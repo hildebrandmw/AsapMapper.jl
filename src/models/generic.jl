@@ -40,12 +40,14 @@ function mem_layout(row,col,count)
     return mem_dict
 end
 
-function build_generic(row::Int64, 
-                       col::Int64, 
-                       lev::Int64, 
-                       dict::Dict{String,Any},
-                       A = KCStandard; 
-                       num_links = 2)
+function generic(row::Int64, 
+                 col::Int64, 
+                 lev::Int64, 
+                 num_memories::Int64,
+                 A = KCStandard,
+                 num_links = 2)
+
+    dict = initialize_dict(row,col,num_memories)
 
     # check for memory_dict key in the bigger dictionary
     if haskey(dict, "input_handler")

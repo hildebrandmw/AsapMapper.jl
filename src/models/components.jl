@@ -6,7 +6,10 @@ architectures.
 ##################
 # COMPLEX BLOCKS #
 ##################
-function build_processor_tile(num_links, name = "processor_tile", include_memory = false)
+function build_processor_tile(num_links, 
+                              name = "processor_tile", 
+                              include_memory = false;
+                              ishex = false)
     # Working towards parameterizing this. For now, just leave this at two
     # because the "processor" components aren't parameterized for the number
     # of ports. This should be easy to fix though.
@@ -16,7 +19,11 @@ function build_processor_tile(num_links, name = "processor_tile", include_memory
     # be needing it.
     comp = Component(name)
     # Add the circuit switched ports
-    directions = ("east", "north", "south", "west")
+    if ishex
+        directions = string.(30:60:330)
+    else
+        directions = ("east", "north", "south", "west")
+    end
     for dir in directions
         for (suffix,class)  in zip(("_in", "_out"), ("input", "output"))
             port_name = join((dir, suffix))
@@ -24,7 +31,11 @@ function build_processor_tile(num_links, name = "processor_tile", include_memory
         end
     end
     # Instantiate the processor primitive
-    add_child(comp, build_processor(num_links, include_memory), "processor")
+    if ishex
+        add_child(comp, build_hex_processor(num_links, include_memory), "processor")
+    else
+        add_child(comp, build_processor(num_links, include_memory), "processor")
+    end
     # Instantiate the directional routing muxes
     routing_mux = build_mux(length(directions),1)
     for dir in directions
@@ -68,9 +79,6 @@ function build_processor_tile(num_links, name = "processor_tile", include_memory
         proc_port = "processor.fifo[$i]"
         connect_ports(comp, fifo_port, proc_port)
     end
-
-    
-
     # Connect input ports to inputs of muxes
 
     # Tracker Structure storing what ports on a mux have been used.
@@ -116,9 +124,12 @@ function build_processor_tile(num_links, name = "processor_tile", include_memory
     return comp
 end
 
-function build_memory_processor_tile(num_links)
+function build_memory_processor_tile(num_links; ishex = false)
     # Get a normal processor and add the memory ports to it.
-    tile = build_processor_tile(num_links,"memory_processor", true)
+    tile = build_processor_tile(num_links,
+                                "memory_processor", 
+                                true, 
+                                ishex = ishex)
     # Need to add the memory processor attribute the processor.
     push!(tile.children["processor"].metadata["attributes"], "memory_processor")
     return tile
@@ -157,6 +168,28 @@ function build_processor(num_links,include_memory = false)
         add_port(component, "memory_out", "output")
     end
     # Return the created type
+    return component
+end
+
+function build_hex_processor(num_links, include_memory = false)
+    num_fifos = 2 
+    metadata = Dict{String,Any}(
+        "attributes" => ["processor"]
+    )
+    name = include_memory ? "memory_processor" : "standard_processor"
+    # Build the skeleton component.
+    component = Component(name, primitive = "", metadata = metadata)
+    # input fifos
+    add_port(component, "fifo", "input", 2)
+    # Add output ports. Label them by their degrees counter-clockwise from 
+    # horizontal.
+    for port in string.(30:60:330)
+        add_port(component, port, "output", num_links)
+    end
+    if include_memory
+        add_port(component, "memory_in", "input")
+        add_port(component, "memory_out", "output")
+    end
     return component
 end
 

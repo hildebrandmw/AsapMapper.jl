@@ -4,5 +4,6 @@ include("components.jl")
 include("asap3.jl")
 include("asap4.jl")
 include("generic.jl")
+include("asap3_hex.jl")
 # Post Creation Transforms
 include("transforms.jl")

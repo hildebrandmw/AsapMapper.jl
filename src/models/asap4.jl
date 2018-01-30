@@ -1,4 +1,4 @@
-function build_asap4(num_links, A)
+function asap4(num_links, A)
     multiple_copies = true
     # Start with a new component - clarify that it is 2 dimensional
     arch = TopLevel{A,2}("asap4")
@@ -97,15 +97,8 @@ function connect_processors(tl, num_links)
     dst_dirs = ("south", "north", "west", "east")
     offset_rules = OffsetRule[]
     for (offset, src, dst) in zip(offsets, src_dirs, dst_dirs)
-        src_ports = String[]
-        dst_ports = String[]
-        # Iterate through the number of source and destination ports.
-        for i in 0:num_links-1
-            src_port = "$(src)_out[$(string(i))]"
-            push!(src_ports, src_port)
-            dst_port = "$(dst)_in[$(string(i))]"
-            push!(dst_ports, dst_port)
-        end
+        src_ports = ["$(src)_out[$i]" for i in 0:num_links-1]
+        dst_ports = ["$(dst)_in[$i]" for i in 0:num_links-1]
         # Create the offset rule and add it to the collection
         new_rule = OffsetRule([offset], src_ports, dst_ports)
         push!(offset_rules, new_rule)
@@ -118,20 +111,12 @@ function connect_processors(tl, num_links)
     # Links can go both directions, so make the offsets an array
     offsets = [Address(0,1), Address(0,-1)]
     for (offset, src, dst) in zip(offsets, src_dirs, dst_dirs)
-        src_ports = String[]
-        dst_ports = String[]
-        for i in 0:num_links-1
-            # Input handler -> processor
-            src_port = "out[$(string(i))]"
-            dst_port = "$(dst)_in[$(string(i))]"
-            push!(src_ports, src_port)
-            push!(dst_ports, dst_port)
-            # processor -> output handler
-            src_port = "$(src)_out[$(string(i))]"
-            dst_port = "in[$(string(i))]"
-            push!(src_ports, src_port)
-            push!(dst_ports, dst_port)
-        end
+        src_ports = ["out[$i]" for i in 0:num_links-1]
+        append!(src_ports, ["$(src)_out[$i]" for i in 0:num_links-1])
+
+        dst_ports = ["$(dst)_in[$i]" for i in 0:num_links-1]
+        append!(dst_ports, ["in[$i]" for i in 0:num_links-1])
+        
         new_rule = OffsetRule([offset], src_ports, dst_ports)
         push!(offset_rules, new_rule)
     end

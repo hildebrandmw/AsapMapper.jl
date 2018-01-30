@@ -8,9 +8,9 @@ function place_and_route(architecture, profile_path, dump_path)
 
     # Dispatch architecture
     if architecture == "asap4"
-        a = build_asap4(2, KCStandard)
+        a = asap4(2, KCStandard)
     elseif architecture == "asap3"
-        a = build_asap3(2, KCNoWeight)
+        a = asap3(2, KCNoWeight)
     else
         KeyError("Architecture $architecture not implemented.")
     end
@@ -36,9 +36,9 @@ end
 function testmap()
     options = Dict{Symbol, Any}()
     println("Building Architecture")
-    arch = build_asap4(2, KCStandard)
-    #arch = build_asap3()
-    #arch = build_generic(16,16,4,initialize_dict(16,16,12), KCStandard)
+    arch = asap4(2, KCStandard)
+    #arch = asap3()
+    #arch = generic(16,16,4,initialize_dict(16,16,12), KCStandard)
     tg = load_taskgraph("alexnet")
     return NewMap(arch, tg)
 end
@@ -46,6 +46,7 @@ end
 struct PlacementTest
     arch_constructor::Function
     arch_args       ::Vector{Any}
+    place_type      ::String
     taskgraph       ::Taskgraph
     place_kwargs    ::Dict{Symbol,Any}
     num_placements  ::Int64
@@ -76,6 +77,7 @@ function run(t::PlacementTest)
         metadata = Dict(
             "architecture"      => string(t.arch_constructor),
             "architecture_args" => arch_arg,
+            "place_type"        => t.place_type,
             "taskgraph"         => t.taskgraph.name,
             "placement_args"    => t.place_kwargs,
             "num_placements"    => t.num_placements,
@@ -168,20 +170,46 @@ function bulk_test(num_runs)
         :warmer         => Mapper2.Place.DefaultSAWarm(0.95, 1.1, 0.99),
         :cooler         => Mapper2.Place.DefaultSACool(0.99),
     )
+
+    app_names = ("alexnet", "sort", "ldpc", "aes", "fft")
+    taskgraphs = Dict(i => load_taskgraph(i) for i in app_names)
     # Test AlexNet on KiloCore 2 - weighted links
     # let
     #     for A in (KCStandard, KCNoWeight)
-    #         arch = build_asap4
+    #         arch = asap4
     #         # Check architecture variations
     #         arch_args = [(nlinks,A) for nlinks in 2:6]
-    #         tg        = load_taskgraph("alexnet")
+    #         tg        = taskgraphs["alexnet"]
 
     #         new_test  = PlacementTest(arch,
     #                                   arch_args,
+    #                                   string(A),
     #                                   tg,
     #                                   place_kwargs,
     #                                   num_runs,
-    #                                   Dict{String,Any}())
+    #                                   Dict{String,Any}(),
+    #                                  )
+    #         push!(tests, new_test)
+    #     end
+    # end
+    # let
+    #     apps    = ("aes", "fft", "sort", "ldpc")
+    #     archs   = (KCStandard, KCNoWeight)
+    #     for (A,app) in Iterators.product(archs, apps)
+    #         arch = asap3
+    #         # Check architecture variations
+    #         arch_args = [(nlinks,A) for nlinks in 2:6]
+    #         tg   = taskgraphs[app]
+
+    #         new_test = PlacementTest(arch,
+    #                                  arch_args,
+    #                                  string(A),
+    #                                  tg,
+    #                                  place_kwargs,
+    #                                  num_runs,
+    #                                  Dict{String,Any}(),
+    #                                 )
+
     #         push!(tests, new_test)
     #     end
     # end
@@ -189,17 +217,40 @@ function bulk_test(num_runs)
         apps    = ("aes", "fft", "sort", "ldpc")
         archs   = (KCStandard, KCNoWeight)
         for (A,app) in Iterators.product(archs, apps)
-            arch = build_asap3
+            arch = generic
             # Check architecture variations
-            arch_args = [(nlinks,A) for nlinks in 2:6]
-            tg   = load_taskgraph(app)
+            arch_args = [(16,16,4,12,A,nl) for nl in 2:4]
+            tg   = taskgraphs[app]
 
             new_test = PlacementTest(arch,
                                      arch_args,
+                                     string(A),
                                      tg,
                                      place_kwargs,
                                      num_runs,
-                                     Dict{String,Any}())
+                                     Dict{String,Any}(),
+                                    )
+
+            push!(tests, new_test)
+        end
+    end
+    let
+        apps    = ("sort",)
+        archs   = (KCStandard, KCNoWeight)
+        for (A,app) in Iterators.product(archs, apps)
+            arch = generic
+            # Check architecture variations
+            arch_args = [(10,10,10,0,A,nl) for nl in 2:4]
+            tg   = taskgraphs[app]
+
+            new_test = PlacementTest(arch,
+                                     arch_args,
+                                     string(A),
+                                     tg,
+                                     place_kwargs,
+                                     num_runs,
+                                     Dict{String,Any}(),
+                                    )
 
             push!(tests, new_test)
         end
@@ -211,19 +262,6 @@ function bulk_test(num_runs)
     return nothing
 end
 
-function save(d)
-    # Make a name for the saved dictionary.
-    args_string = join(d["meta"]["architecture_args"][1:2],"_")
-    name = join([
-        d["meta"]["taskgraph"],
-        d["meta"]["architecture"],
-        args_string,
-        "json.gz"],
-        "_", ".")
-    f = GZip.open(joinpath(PKGDIR, "results", name), "w")
-    JSON.print(f, d, 2)
-    close(f)
-end
 
 function slow_run(m)
     # Run placement
