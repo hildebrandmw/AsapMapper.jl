@@ -2,4 +2,6 @@
 *.jl.*.cov
 *.jl.mem
 saved/*
+results/*
+backup/*
 *.pickle

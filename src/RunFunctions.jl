@@ -36,10 +36,11 @@ end
 function testmap()
     options = Dict{Symbol, Any}()
     println("Building Architecture")
-    arch = asap4(2, KCStandard)
+    #arch = asap4(2, KCStandard)
+    arch = asap3_hex(2, KCStandard)
     #arch = asap3()
     #arch = generic(16,16,4,initialize_dict(16,16,12), KCStandard)
-    tg = load_taskgraph("alexnet")
+    tg = load_taskgraph("aes")
     return NewMap(arch, tg)
 end
 
@@ -173,6 +174,9 @@ function bulk_test(num_runs)
 
     app_names = ("alexnet", "sort", "ldpc", "aes", "fft")
     taskgraphs = Dict(i => load_taskgraph(i) for i in app_names)
+    strategies = (KCStandard, KCNoWeight)
+
+    asap3_hex_tests(tests, strategies, num_runs, taskgraphs, place_kwargs)
     # Test AlexNet on KiloCore 2 - weighted links
     # let
     #     for A in (KCStandard, KCNoWeight)
@@ -213,48 +217,48 @@ function bulk_test(num_runs)
     #         push!(tests, new_test)
     #     end
     # end
-    let
-        apps    = ("aes", "fft", "sort", "ldpc")
-        archs   = (KCStandard, KCNoWeight)
-        for (A,app) in Iterators.product(archs, apps)
-            arch = generic
-            # Check architecture variations
-            arch_args = [(16,16,4,12,A,nl) for nl in 2:4]
-            tg   = taskgraphs[app]
+    # let
+    #     apps    = ("aes", "fft", "sort", "ldpc")
+    #     archs   = (KCStandard, KCNoWeight)
+    #     for (A,app) in Iterators.product(archs, apps)
+    #         arch = generic
+    #         # Check architecture variations
+    #         arch_args = [(16,16,4,12,A,nl) for nl in 2:4]
+    #         tg   = taskgraphs[app]
 
-            new_test = PlacementTest(arch,
-                                     arch_args,
-                                     string(A),
-                                     tg,
-                                     place_kwargs,
-                                     num_runs,
-                                     Dict{String,Any}(),
-                                    )
+    #         new_test = PlacementTest(arch,
+    #                                  arch_args,
+    #                                  string(A),
+    #                                  tg,
+    #                                  place_kwargs,
+    #                                  num_runs,
+    #                                  Dict{String,Any}(),
+    #                                 )
 
-            push!(tests, new_test)
-        end
-    end
-    let
-        apps    = ("sort",)
-        archs   = (KCStandard, KCNoWeight)
-        for (A,app) in Iterators.product(archs, apps)
-            arch = generic
-            # Check architecture variations
-            arch_args = [(10,10,10,0,A,nl) for nl in 2:4]
-            tg   = taskgraphs[app]
+    #         push!(tests, new_test)
+    #     end
+    # end
+    # let
+    #     apps    = ("sort",)
+    #     archs   = (KCStandard, KCNoWeight)
+    #     for (A,app) in Iterators.product(archs, apps)
+    #         arch = generic
+    #         # Check architecture variations
+    #         arch_args = [(10,10,10,0,A,nl) for nl in 2:4]
+    #         tg   = taskgraphs[app]
 
-            new_test = PlacementTest(arch,
-                                     arch_args,
-                                     string(A),
-                                     tg,
-                                     place_kwargs,
-                                     num_runs,
-                                     Dict{String,Any}(),
-                                    )
+    #         new_test = PlacementTest(arch,
+    #                                  arch_args,
+    #                                  string(A),
+    #                                  tg,
+    #                                  place_kwargs,
+    #                                  num_runs,
+    #                                  Dict{String,Any}(),
+    #                                 )
 
-            push!(tests, new_test)
-        end
-    end
+    #         push!(tests, new_test)
+    #     end
+    # end
 
     for t in tests
         run(t)

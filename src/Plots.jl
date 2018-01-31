@@ -1,5 +1,6 @@
 using StatPlots
 gr()
+#pyplot()
 using GZip, JSON
 
 # Helpful Filter Functiong
@@ -9,9 +10,15 @@ ismode(d, mode) = d["meta"]["architecture_args"][2] == "AsapMapper.$mode"
 
 function make_print_name(d::Dict)
     arch  = strip_asap(d["meta"]["architecture"])
-    arch_arg_strings = reverse(strip_asap.(string.(d["meta"]["architecture_args"])))
-    arch_args = join(arch_arg_strings, "_")
-    name = join((arch, arch_args), " ")
+    arch_args = d["meta"]["architecture_args"]
+    # Gather the arguments that are strings
+    string_args = [i for i in arch_args if typeof(i) <: String]
+    non_string_args = [i for i in arch_args if !(typeof(i) <: String)]
+    # Concatenate the two together
+    ordered             = vcat(string_args, non_string_args)
+    arch_arg_strings    = strip_asap.(string.(ordered))
+    arch_args           = join(arch_arg_strings, "_")
+    name                = join((arch, arch_args), " ")
     return name
 end
 
@@ -21,7 +28,7 @@ function data_lt(a,b)
     return a_name < b_name
 end
 
-function plot_results(filter, field)
+function plot_results(filter, field, legend = :topright)
     dicts = [] 
     # Walk through all results files, reading the dictionary. Apply the filter
     # to the dictionary. If it passes, add the dictionary to the `dicts` array
@@ -58,6 +65,6 @@ function plot_results(filter, field)
     boxplot(1:length(datasets), datasets, 
             label = series,
             legendfont = font(4, "Courier"),
-            legend = :bottomleft,
+            legend = legend,
            )
 end

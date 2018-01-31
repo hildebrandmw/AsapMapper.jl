@@ -16,7 +16,7 @@ end
 
 @testset "Testing Whole Flow" begin
     # Build Architecture
-    arch = AsapMapper.asap4(4, AsapMapper.KCStandard)
+    arch = AsapMapper.asap4(2, AsapMapper.KCStandard)
     # Create Taskgraph Constructor
     sdc = AsapMapper.CachedSimDump("alexnet")
     taskgraph = AsapMapper.build_taskgraph(sdc)
