@@ -1,17 +1,14 @@
 module AsapMapper
+#include("Plots.jl")
 
 using Mapper2
-using IterTools
-
-using JSON
-using GZip
+using IterTools, JSON, GZip
 
 # Set up directory paths
 const SRCDIR = @__DIR__
 const PKGDIR = dirname(SRCDIR)
 const RESULTS_DIR = joinpath(PKGDIR, "results")
 
-include("Plots.jl")
 
 #=
 Framework for the Kilocore project using the rest of the Mapper infrastructure.

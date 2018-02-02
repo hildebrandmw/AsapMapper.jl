@@ -3,13 +3,37 @@ A collection of core components to be used in the Asap3, Asap4, and generic
 architectures.
 =#
 
+function make_port_metadata(direction, class, num_links)
+
+    x_spacing = 0.4/num_links
+    y_spacing = 0.4/num_links
+
+    if direction in ("east", "west")
+        y_offset = (class == "input")       ? 0.55 : 0.05
+        x_offset = (direction == "east")    ? 1.0  : 0.0
+        return [Dict("x" => x_offset, "y" => y_offset + i * y_spacing) 
+                    for i in 0:num_links-1]
+    elseif direction in ("north", "south")
+        x_offset = (class == "input")       ? 0.55 : 0.05
+        y_offset = (direction == "south")   ? 1.0 : 0.0
+        return [Dict("x" => x_offset + i * x_spacing, "y" => y_offset) 
+                    for i in 0:num_links-1]
+    else
+        return [make_port_metadata() for _ in 1:num_links]
+    end
+end
+
+make_port_metadata() = Dict("x" => 0.5, "y" => 0.5)
+make_port_metadata(num_links) = [make_port_metadata() for _ in 1:num_links]
+
 ##################
 # COMPLEX BLOCKS #
 ##################
 function build_processor_tile(num_links, 
                               name = "processor_tile", 
                               include_memory = false;
-                              ishex = false)
+                              directions = ("east", "north", "south", "west"),
+                             )
     # Working towards parameterizing this. For now, just leave this at two
     # because the "processor" components aren't parameterized for the number
     # of ports. This should be easy to fix though.
@@ -19,23 +43,16 @@ function build_processor_tile(num_links,
     # be needing it.
     comp = Component(name)
     # Add the circuit switched ports
-    if ishex
-        directions = string.(30:60:330)
-    else
-        directions = ("east", "north", "south", "west")
-    end
     for dir in directions
         for (suffix,class)  in zip(("_in", "_out"), ("input", "output"))
             port_name = join((dir, suffix))
-            add_port(comp, port_name, class, num_links)
+            metadata = make_port_metadata(dir, class, num_links)
+            add_port(comp, port_name, class, num_links, metadata = metadata)
         end
     end
     # Instantiate the processor primitive
-    if ishex
-        add_child(comp, build_hex_processor(num_links, include_memory), "processor")
-    else
-        add_child(comp, build_processor(num_links, include_memory), "processor")
-    end
+    add_child(comp, build_processor(num_links, include_memory), "processor")
+
     # Instantiate the directional routing muxes
     routing_mux = build_mux(length(directions),1)
     for dir in directions
@@ -43,14 +60,15 @@ function build_processor_tile(num_links,
         add_child(comp, routing_mux, name, num_links)
     end
     # Instantiate the muxes routing data to the fifos
-    num_fifo_entries = length(directions) * num_links + 2
+    num_fifo_entries = length(directions) * num_links + 1
     add_child(comp, build_mux(num_fifo_entries,1), "fifo_mux", num_fifos)
     # Add memory ports - only memory processor tiles will have the necessary
     # "memory_processor" attribute in the core to allow memory application
     # to be mapped to them.
     if include_memory
-        add_port(comp, "memory_in", "input")
-        add_port(comp, "memory_out", "output")
+        metadata = make_port_metadata()
+        add_port(comp, "memory_in", "input", metadata = metadata)
+        add_port(comp, "memory_out", "output", metadata = metadata)
         connect_ports(comp, "processor.memory_out", "memory_out")
         connect_ports(comp, "memory_in", "processor.memory_in")
     end
@@ -121,17 +139,19 @@ function build_processor_tile(num_links,
             connect_ports(comp, source_port, sink_ports)
         end
     end
+    check(comp)
     return comp
 end
 
-function build_memory_processor_tile(num_links; ishex = false)
+function build_memory_processor_tile(num_links)
     # Get a normal processor and add the memory ports to it.
     tile = build_processor_tile(num_links,
                                 "memory_processor", 
                                 true, 
-                                ishex = ishex)
+                               )
     # Need to add the memory processor attribute the processor.
     push!(tile.children["processor"].metadata["attributes"], "memory_processor")
+    check(tile)
     return tile
 end
 
@@ -202,8 +222,9 @@ function build_memory_1port()
     metadata["attributes"] = ["memory_1port"]
     component = Component("memory_1port", primitive = "", metadata = metadata)
     # Add the input and output ports
-    add_port(component, "in[0]", "input")
-    add_port(component, "out[0]", "output")
+    port_metadata = make_port_metadata()
+    add_port(component, "in[0]", "input", metadata = port_metadata)
+    add_port(component, "out[0]", "output", metadata = port_metadata)
     # Return the created type
     return component
 end
@@ -217,8 +238,9 @@ function build_memory_2port()
     metadata["attributes"] = ["memory_1port", "memory_2port"]
     component = Component("memory_2port", primitive = "", metadata = metadata)
     # Add the input and output ports
-    add_port(component, "in", "input", 2)
-    add_port(component, "out", "output", 2)
+    port_metadata = make_port_metadata()
+    add_port(component, "in", "input", 2, metadata = port_metadata)
+    add_port(component, "out", "output", 2, metadata = port_metadata)
     # Return the created type
     return component
 end
@@ -232,7 +254,7 @@ function build_input_handler(num_links)
     metadata["attributes"] = ["input_handler"]
     component = Component("input_handler", primitive = "", metadata = metadata)
     # Add the input and output ports
-    add_port(component, "out", "output", num_links)
+    add_port(component, "out", "output", num_links, metadata = make_port_metadata())
     # Return the created type
     return component
 end
@@ -246,7 +268,8 @@ function build_output_handler(num_links)
     metadata["attributes"] = ["output_handler"]
     component = Component("output_handler", primitive = "", metadata = metadata)
     # Add the input and output ports
-    add_port(component, "in", "input", num_links)
+    port_metadata = make_port_metadata()
+    add_port(component, "in", "input", num_links, metadata = port_metadata)
     # Return the created type
     return component
 end
