@@ -37,10 +37,10 @@ function testmap()
     options = Dict{Symbol, Any}()
     println("Building Architecture")
     #arch = asap4(2, KCStandard)
-    arch = asap3_hex(2, KCStandard)
-    #arch = asap3()
+    #arch = asap3_hex(2, KCStandard)
+    arch = asap3(3, KCStandard)
     #arch = generic(16,16,4,initialize_dict(16,16,12), KCStandard)
-    tg = load_taskgraph("aes")
+    tg = load_taskgraph("sort")
     return NewMap(arch, tg)
 end
 

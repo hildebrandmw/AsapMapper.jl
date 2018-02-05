@@ -1,5 +1,6 @@
 module AsapMapper
-#include("Plots.jl")
+
+const USEPLOTS = true
 
 using Mapper2
 using IterTools, JSON, GZip
@@ -75,5 +76,7 @@ include("MapDump.jl")
 include("RunFunctions.jl")
 include("Tests.jl")
 include("Results.jl")
+
+include("Plots.jl")
 
 end # module
