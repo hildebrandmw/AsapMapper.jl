@@ -5,3 +5,5 @@ saved/*
 results/*
 backup/*
 *.pickle
+*.swp
+*.png

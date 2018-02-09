@@ -13,7 +13,7 @@ Idea is to do the following:
 function save(d::Dict)
     # Get the application name and architecture constructor name from the 
     # dictionary. 
-    app  = d["meta"]["taskgraph"]
+    app  = d["meta"]["app_name"]
     arch = strip_asap.(d["meta"]["architecture"])
     # Check to see if a directory for this exists yet.
     # Categorize first by application, then by architecture.
@@ -54,17 +54,3 @@ function rmresults(filter, dry = false)
         end
     end
 end
-
-# function save(d)
-#     # Make a name for the saved dictionary.
-#     args_string = join(d["meta"]["architecture_args"][1:2],"_")
-#     name = join([
-#         d["meta"]["taskgraph"],
-#         d["meta"]["architecture"],
-#         args_string,
-#         "json.gz"],
-#         "_", ".")
-#     f = GZip.open(joinpath(PKGDIR, "results", name), "w")
-#     JSON.print(f, d, 2)
-#     close(f)
-# end

@@ -4,6 +4,8 @@ const USEPLOTS = true
 
 using Mapper2
 using IterTools, JSON, GZip
+using Parameters
+using MicroLogging
 
 # Set up directory paths
 const SRCDIR = @__DIR__
@@ -77,6 +79,6 @@ include("RunFunctions.jl")
 include("Tests.jl")
 include("Results.jl")
 
-include("Plots.jl")
+#include("Plots.jl")
 
 end # module

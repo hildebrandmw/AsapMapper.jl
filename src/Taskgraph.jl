@@ -18,11 +18,11 @@ convenient and will yield cleaner code.
 abstract type AbstractTaskgraphConstructor end
 
 function apply_transforms(tg, atc::AbstractTaskgraphConstructor)
-    println("Applying Transforms")
+    @debug "Applying Transforms"
     # Get the transforms requested by the constructor.
     transforms = get_transforms(atc)
     for t in transforms
-        println("Transform: ", string(t))
+        @debug "Transform: $t"
         tg = t(tg)::Taskgraph
     end
     return tg
@@ -201,10 +201,10 @@ function t_unpack_attached_memories(tg::Taskgraph)
             delete!(node.metadata, "attached_memory")
         end
     end
-    print("Nodes added: ")
-    print(nodes_added, "\n")
-    print("Edges added: ")
-    print(edges_added, "\n")
+    @debug """
+        Nodes added: $nodes_added
+        Edges added: $edges_added
+        """
     return tg
 end
 

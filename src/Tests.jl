@@ -1,6 +1,7 @@
 function asap4_tests(tests, 
                      strategies, 
                      num_runs,
+                     nsamples,
                      taskgraphs::Dict, 
                      place_kwargs::Dict)
 
@@ -13,9 +14,10 @@ function asap4_tests(tests,
             new_test  = PlacementTest(arch,
                                       arch_args,
                                       string(A),
-                                      tg,
+                                      taskgraph,
                                       place_kwargs,
                                       num_runs,
+                                      nsamples,
                                       Dict{String,Any}(),
                                      )
             push!(tests, new_test)
