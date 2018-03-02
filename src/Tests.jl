@@ -28,6 +28,7 @@ end
 function asap3_tests(tests, 
                      strategies, 
                      num_runs,
+                     nsamples,
                      taskgraphs::Dict, 
                      place_kwargs::Dict)
 
@@ -44,6 +45,7 @@ function asap3_tests(tests,
                                  tg,
                                  place_kwargs,
                                  num_runs,
+                                 nsamples,
                                  Dict{String,Any}(),
                                 )
 
@@ -54,6 +56,7 @@ end
 function generic1_tests(tests, 
                      strategies, 
                      num_runs,
+                     nsamples,
                      taskgraphs::Dict, 
                      place_kwargs::Dict)
 
@@ -70,6 +73,7 @@ function generic1_tests(tests,
                                  tg,
                                  place_kwargs,
                                  num_runs,
+                                 nsamples,
                                  Dict{String,Any}(),
                                 )
 
@@ -80,6 +84,7 @@ end
 function generic2_tests(tests, 
                      strategies, 
                      num_runs,
+                     nsamples,
                      taskgraphs::Dict, 
                      place_kwargs::Dict)
     apps    = ("sort",)
@@ -95,6 +100,7 @@ function generic2_tests(tests,
                                  tg,
                                  place_kwargs,
                                  num_runs,
+                                 nsamples,
                                  Dict{String,Any}(),
                                 )
 

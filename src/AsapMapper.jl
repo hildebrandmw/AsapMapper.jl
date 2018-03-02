@@ -1,10 +1,9 @@
 module AsapMapper
 
-const USEPLOTS = true
+#const USEPLOTS = true
 
 using Mapper2
 using IterTools, JSON, GZip
-using Parameters
 using MicroLogging
 
 # Set up directory paths
@@ -12,19 +11,19 @@ const SRCDIR = @__DIR__
 const PKGDIR = dirname(SRCDIR)
 const RESULTS_DIR = joinpath(PKGDIR, "results")
 
+export  testmap,
+        place,
+        route
 
-#=
-Framework for the Kilocore project using the rest of the Mapper infrastructure.
+# Helpful Functions
+function oneofin(a,b)
+    for i in a
+        i in b && return true
+    end
+    return false
+end
 
-Special methods for:
-
-Architecture Creation
-Taskgraph Construction
-Placement Related Functions
-Routing Related Functions
-
-will be defined in this folder.
-=#
+const push_to_dict = Mapper2.Helper.push_to_dict
 
 ################################################################################
 # Attributes to determine what tasks may be mapped to which components in
@@ -60,8 +59,8 @@ const _special_attributes = Set([
 ################################################################################
 
 abstract type AbstractKC <: AbstractArchitecture end
+
 struct KCNoWeight <: AbstractKC end
-"Basic architecture with link weights"
 struct KCStandard  <: AbstractKC end
 
 # Architectures
@@ -79,6 +78,6 @@ include("RunFunctions.jl")
 include("Tests.jl")
 include("Results.jl")
 
-#include("Plots.jl")
+include("Plots.jl")
 
 end # module

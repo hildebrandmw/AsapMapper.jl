@@ -19,21 +19,21 @@ function mem_layout(row,col,count)
     for i = 0:(count/4)-1
         push!(col_addr,(i*col_spacing)+4)
     end
-    mem_dict = Dict{Mapper2.Address{3},Array{Mapper2.Address{3},1}}()
+    mem_dict = Dict{Mapper2.CartesianIndex{3},Array{Mapper2.CartesianIndex{3},1}}()
     for r in row_addr
-        mem_addr = Address(r,1,1)
-        memproc_addr = [Address(r,2,1),Address(r+1,2,1)]
+        mem_addr = CartesianIndex(r,1,1)
+        memproc_addr = [CartesianIndex(r,2,1),CartesianIndex(r+1,2,1)]
         mem_dict[mem_addr] = memproc_addr
-        mem_addr = Address(r,col+2,1)
-        memproc_addr = [Address(r,col+1,1),Address(r+1,col+1,1)]
+        mem_addr = CartesianIndex(r,col+2,1)
+        memproc_addr = [CartesianIndex(r,col+1,1),CartesianIndex(r+1,col+1,1)]
         mem_dict[mem_addr] = memproc_addr
     end
     for c in col_addr
-        mem_addr = Address(1,c,1)
-        memproc_addr = [Address(2,c,1),Address(2,c+1,1)]
+        mem_addr = CartesianIndex(1,c,1)
+        memproc_addr = [CartesianIndex(2,c,1),CartesianIndex(2,c+1,1)]
         mem_dict[mem_addr] = memproc_addr
-        mem_addr = Address(row+2,c,1)
-        memproc_addr = [Address(row+1,c,1),Address(row+1,c+1,1)]
+        mem_addr = CartesianIndex(row+2,c,1)
+        memproc_addr = [CartesianIndex(row+1,c,1),CartesianIndex(row+1,c+1,1)]
         mem_dict[mem_addr] = memproc_addr
     end
 
@@ -58,7 +58,7 @@ function generic(row::Int64,
         mem_dict = dict["memory_dict"]
     else
         # if dict does not contain memory_dict, initialize an empty array
-        mem_dict = Dict{Mapper2.Address{3},Vector{Mapper2.Address{3}}}()
+        mem_dict = Dict{Mapper2.CartesianIndex{3},Vector{Mapper2.CartesianIndex{3}}}()
     end
 
     # Check the dimension
@@ -79,8 +79,8 @@ function generic(row::Int64,
     arch = TopLevel{A,3}("generic")
 
     # make empty arrays for memory addresses and memory neighbor addresses
-    mem_array = Address[]
-    mem_proc_array = Address[]
+    mem_array = CartesianIndex[]
+    mem_proc_array = CartesianIndex[]
     # move the addresses from mem_dict to arrays
     for (key,value) in mem_dict
         push!(mem_array,key)
@@ -96,10 +96,10 @@ function generic(row::Int64,
 	processor = build_processor_tile_generic(dim,directions)
     # Instantiate it at the required addresses
   	for r in 2:row+1, c in 2:col+1, l in 1:lev
-        if Address(r,c,l) in mem_proc_array || Address(r,c,l) in mem_array
+        if CartesianIndex(r,c,l) in mem_proc_array || CartesianIndex(r,c,l) in mem_array
             continue # avoid the addresses in mem_dict
         end
-		add_child(arch, processor, Address(r,c,l))
+		add_child(arch, processor, CartesianIndex(r,c,l))
   	end
 
 	####################
@@ -126,13 +126,13 @@ function generic(row::Int64,
     for i = 0:num_in-1
         row = Int(2+(s*i))
         println(row)
-        add_child(arch, input_handler, Address(row,1,1))
+        add_child(arch, input_handler, CartesianIndex(row,1,1))
     end
     ##################
     # Output Handler #
     ##################
     output_handler = build_output_handler(num_links)
-    add_child(arch, output_handler, Address(2,col+2,1))
+    add_child(arch, output_handler, CartesianIndex(2,col+2,1))
 
     #######################
     # Global Interconnect #
@@ -209,25 +209,25 @@ directions::Tuple{NTuple{4,String},NTuple{6,String}})
 
     # Interconnect - Don't attach metadata and let the routing routine fill in
     # defaults to intra-tile routing.
-    connect_ports(comp, "processor.memory_out", "memory_out")
-    connect_ports(comp, "memory_in", "processor.memory_in")
+    add_link(comp, "processor.memory_out", "memory_out")
+    add_link(comp, "memory_in", "processor.memory_in")
 
     # Connect outputs of muxes to the tile outputs
     for dir in directions[dimension-1], i = 0:num_links-1
         mux_port = join((dir, "_mux[",string(i),"].out[0]"))
         tile_port = join((dir, "_out[",string(i),"]"))
-        connect_ports(comp, mux_port, tile_port)
+        add_link(comp, mux_port, tile_port)
     end
     # Circuit switch output links
     for dir in directions[dimension-1], i = 0:num_links-1
         processor_port = join(("processor.",dir,"[",string(i),"]"))
         mux_port = join((dir, "_mux[",string(i),"].in[0]"))
-        connect_ports(comp,processor_port,mux_port)
+        add_link(comp,processor_port,mux_port)
     end
 
     # Input Links
-    connect_ports(comp, "fifo_mux[0].out[0]", ["processor.fifo[0]"])
-    connect_ports(comp, "fifo_mux[1].out[0]", ["processor.fifo[1]"])
+    add_link(comp, "fifo_mux[0].out[0]", ["processor.fifo[0]"])
+    add_link(comp, "fifo_mux[1].out[0]", ["processor.fifo[1]"])
     # Connect input ports to inputs of muxes
     dir_count = 0
     fifo_count = 0
@@ -249,7 +249,7 @@ directions::Tuple{NTuple{4,String},NTuple{6,String}})
             end
             push!(sink_ports,join(("fifo_mux[0].in[",string(fifo_count-1),"]")))
             push!(sink_ports,join(("fifo_mux[1].in[",string(fifo_count-1),"]")))
-            connect_ports(comp, tile_port, sink_ports)
+            add_link(comp, tile_port, sink_ports)
         end
     end
     return comp
@@ -276,10 +276,10 @@ function connect_processors_generic(tl,dimension)
     dst_rule = src_rule
     # Create offset rules.
     # Offsets are just unit steps in four directions.
-    offsets2d = [Address(-1,0,0), Address(1,0,0), Address(0,1,0),
-                Address(0,-1,0)]
-    offsets3d = [Address(-1,0,0), Address(1,0,0), Address(0,1,0),
-                Address(0,-1,0), Address(0,0,1), Address(0,0,-1)]
+    offsets2d = [CartesianIndex(-1,0,0), CartesianIndex(1,0,0), CartesianIndex(0,1,0),
+                CartesianIndex(0,-1,0)]
+    offsets3d = [CartesianIndex(-1,0,0), CartesianIndex(1,0,0), CartesianIndex(0,1,0),
+                CartesianIndex(0,-1,0), CartesianIndex(0,0,1), CartesianIndex(0,0,-1)]
     offsets = (offsets2d,offsets3d)
     #=
     Create two tuples for the source ports and destination ports. In general,
@@ -315,7 +315,7 @@ function connect_processors_generic(tl,dimension)
     src_dirs = ("east","west")
     dst_dirs = ("west","east")
     # Links can go both directions, so make the offsets an array
-    offsets = [Address(0,1,0), Address(0,-1,0)]
+    offsets = [CartesianIndex(0,1,0), CartesianIndex(0,-1,0)]
     for (offset, src, dst) in zip(offsets, src_dirs, dst_dirs)
         src_ports = String[]
         dst_ports = String[]
@@ -367,26 +367,26 @@ function connect_memories_generic(tl)
     mem_rule = PortRule(mem_key, mem_val, mem_fn)
     # Make connections from memory to memory-processors
     offset_rules = OffsetRule[]
-    push!(offset_rules, OffsetRule(Address(-1, 0,0), "out[0]", "memory_in"))
-    push!(offset_rules, OffsetRule(Address(-1, 1,0), "out[1]", "memory_in"))
-    push!(offset_rules, OffsetRule(Address( 1, 0,0), "out[0]", "memory_in"))
-    push!(offset_rules, OffsetRule(Address( 1, 1,0), "out[1]", "memory_in"))
-    push!(offset_rules, OffsetRule(Address( 0, 1,0), "out[0]", "memory_in"))
-    push!(offset_rules, OffsetRule(Address( 1, 1,0), "out[1]", "memory_in"))
-    push!(offset_rules, OffsetRule(Address( 0,-1,0), "out[0]", "memory_in"))
-    push!(offset_rules, OffsetRule(Address( 1,-1,0), "out[1]", "memory_in"))
+    push!(offset_rules, OffsetRule(CartesianIndex(-1, 0,0), "out[0]", "memory_in"))
+    push!(offset_rules, OffsetRule(CartesianIndex(-1, 1,0), "out[1]", "memory_in"))
+    push!(offset_rules, OffsetRule(CartesianIndex( 1, 0,0), "out[0]", "memory_in"))
+    push!(offset_rules, OffsetRule(CartesianIndex( 1, 1,0), "out[1]", "memory_in"))
+    push!(offset_rules, OffsetRule(CartesianIndex( 0, 1,0), "out[0]", "memory_in"))
+    push!(offset_rules, OffsetRule(CartesianIndex( 1, 1,0), "out[1]", "memory_in"))
+    push!(offset_rules, OffsetRule(CartesianIndex( 0,-1,0), "out[0]", "memory_in"))
+    push!(offset_rules, OffsetRule(CartesianIndex( 1,-1,0), "out[1]", "memory_in"))
     connection_rule(tl, offset_rules, mem_rule, proc_rule, metadata = metadata)
 
     # Make connections from memory-processors to memories.
     offset_rules = OffsetRule[]
-    push!(offset_rules, OffsetRule(Address( 1, 0,0), "memory_out", "in[0]"))
-    push!(offset_rules, OffsetRule(Address( 1,-1,0), "memory_out", "in[1]"))
-    push!(offset_rules, OffsetRule(Address(-1, 0,0), "memory_out", "in[0]"))
-    push!(offset_rules, OffsetRule(Address(-1,-1,0), "memory_out", "in[1]"))
-    push!(offset_rules, OffsetRule(Address( 0,-1,0), "memory_out", "in[0]"))
-    push!(offset_rules, OffsetRule(Address(-1,-1,0), "memory_out", "in[1]"))
-    push!(offset_rules, OffsetRule(Address( 0, 1,0), "memory_out", "in[0]"))
-    push!(offset_rules, OffsetRule(Address(-1, 1,0), "memory_out", "in[1]"))
+    push!(offset_rules, OffsetRule(CartesianIndex( 1, 0,0), "memory_out", "in[0]"))
+    push!(offset_rules, OffsetRule(CartesianIndex( 1,-1,0), "memory_out", "in[1]"))
+    push!(offset_rules, OffsetRule(CartesianIndex(-1, 0,0), "memory_out", "in[0]"))
+    push!(offset_rules, OffsetRule(CartesianIndex(-1,-1,0), "memory_out", "in[1]"))
+    push!(offset_rules, OffsetRule(CartesianIndex( 0,-1,0), "memory_out", "in[0]"))
+    push!(offset_rules, OffsetRule(CartesianIndex(-1,-1,0), "memory_out", "in[1]"))
+    push!(offset_rules, OffsetRule(CartesianIndex( 0, 1,0), "memory_out", "in[0]"))
+    push!(offset_rules, OffsetRule(CartesianIndex(-1, 1,0), "memory_out", "in[1]"))
     connection_rule(tl, offset_rules, proc_rule, mem_rule, metadata = metadata)
 
     ###########################
@@ -397,11 +397,11 @@ function connect_memories_generic(tl)
     mem_rule = PortRule(mem_key, mem_val, mem_fn)
     # Make connections from memory to memory-processors
     offset_rules = OffsetRule[]
-    push!(offset_rules, OffsetRule(Address(-1,0,0), "out[0]", "memory_in"))
+    push!(offset_rules, OffsetRule(CartesianIndex(-1,0,0), "out[0]", "memory_in"))
     connection_rule(tl, offset_rules, mem_rule, proc_rule, metadata = metadata)
     # Make connections from memory-processors to memories.
     offset_rules = OffsetRule[]
-    push!(offset_rules, OffsetRule(Address(1,0,0), "memory_out", "in[0]"))
+    push!(offset_rules, OffsetRule(CartesianIndex(1,0,0), "memory_out", "in[0]"))
     connection_rule(tl, offset_rules, proc_rule, mem_rule, metadata = metadata)
 
     return nothing

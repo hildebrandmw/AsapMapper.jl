@@ -1,20 +1,3 @@
-#=
-Taskgraph constructors will go here. If the number of constructors gets very
-large - may want to think about moving the collection of constructors to a subdirectory in the Taskgraphs folder.
-
-Initially - there will be only one constructor that will take the sim-dump JSON
-directly and import it almost verbatim into the Taskgraph data type.
-
-From there - stages of processing will take place to compute link weights,
-distance limits, etc.
-
-Additionally, may include support for the modified JSON file that we've been
-generating for Mapper1. However, this is low priority and not very likely since
-working on the Taskgraph data structure directly is likely to be much more
-convenient and will yield cleaner code.
-=#
-
-# Type for choosing the constructor.
 abstract type AbstractTaskgraphConstructor end
 
 function apply_transforms(tg, atc::AbstractTaskgraphConstructor)
@@ -27,7 +10,6 @@ function apply_transforms(tg, atc::AbstractTaskgraphConstructor)
     end
     return tg
 end
-
 
 ################################################################################
 # Taskgraph Constructors used by the Kilocore framework.
@@ -103,37 +85,6 @@ end
 
 
 #=
-Want to make a set of generalized transforms that can be run on the post
-parsed taskgraph to generate the task attribute requirements and link weights.
-
-Options for how to procede:
-
-1. Have specific algorithms implemented for each constructor type. Will be
-    powerful but require a lot of code to be generated if we ever want
-    more constructors.
-
-2. Try to find general kernals that can be applied across many constructors
-    and maybe even called multiple times with different parameters. Might
-    be more complex to set up but more extensible? Maybe?
-
-Will probably have to end up doing a bit of both.
-
-DECISION: Transforms will likely be very dependant on the constructor, so to
-a large extent will have to be implemented for each constructor type.
-Fortunately, there shouldn't be too many distinct constructors.
-
-Furthermore, there will be different run characteristics such as:
-- doing a normal mapping with just weights for the links
-- adding distance limits to the links
-- performing task suitability
-
-All of these may have a different subset of all the transforms needed to
-run properly. Thus, it probably makes sense to implement the transforms
-listed below for the SimDumpConstructor.
-
-NOTE: While implementing these transforms, think if there is a convenient way
-to spawn off common operations into kernel functions.
-
 ################################################################################
 Transforms needed to get Mapper2 to the state of Mapper1:
 
@@ -143,8 +94,8 @@ Transforms needed to get Mapper2 to the state of Mapper1:
     - Think about if it makes sense to break apart having just pure weights
         and adding distnace limits as one of the options that can be chosen
         by the top level Map data structure.
-=#
 ################################################################################
+=#
 
 """
     t_unpack_attached_memories(tg::Taskgraph)

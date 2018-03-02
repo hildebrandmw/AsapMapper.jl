@@ -1,21 +1,12 @@
-################################################################################
-# Types for annotating links in the routing resources graph
-################################################################################
-
-
-################################################################################
-# Annotations for creating the links in the Taskgraph.
-################################################################################
 struct CostChannel <: AbstractRoutingChannel
-    start::Vector{Int64}
-    stop::Vector{Int64}
-    cost::Float64
-    function CostChannel(start, stop, taskgraph_edge)
-        cost = taskgraph_edge.metadata["weight"]
-        return new(start, stop, cost)
-    end
+    start   ::Vector{Vector{Int64}}
+    stop    ::Vector{Vector{Int64}}
+    cost    ::Float64
 end
 
 Base.isless(a::CostChannel, b::CostChannel) = a.cost < b.cost
 
-Mapper2.routing_channel_type(::Type{KCStandard}) = CostChannel
+function Mapper2.routing_channel(::Type{KCStandard}, start, stop, edge)
+    cost = edge.metadata["weight"]
+    return CostChannel(start, stop, cost)
+end

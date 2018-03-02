@@ -29,8 +29,10 @@ end
 
 function makename(d::Dict)
     basename = join(strip_asap.(string.(d["meta"]["architecture_args"])),"_")
+    # Make a hashed key based on the arguments.
+    hash_key = hash(d["meta"]["placement_args"])
     extension = ".json.gz"
-    return basename * extension
+    return "$(basename)_$(hash_key)$(extension)"
 end
 
 strip_asap(str::String) = replace(str, r"^AsapMapper\.", "")

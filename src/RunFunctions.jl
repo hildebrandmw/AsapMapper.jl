@@ -39,10 +39,11 @@ function testmap()
     println("Building Architecture")
     #arch = asap4(2, KCStandard)
     #arch = asap3_hex(2, KCStandard)
-    arch = asap3(3, KCStandard)
-    #arch = generic(16,16,4,initialize_dict(16,16,12), KCStandard)
-    tg = load_taskgraph("sort")
-    return NewMap(arch, tg)
+    arch = asap3(2, KCStandard)
+    #arch = generic(16,16,4,12, KCStandard)
+    tg = load_taskgraph("aes")
+    m = NewMap(arch, tg)
+    return m
 end
 
 struct PlacementTest
@@ -203,9 +204,9 @@ function bulk_test(nruns, nsamples)
     tests = []
     # Common arguments across all runs
     place_kwargs = Dict{Symbol,Any}(
-        :move_attempts  => 700000,
+        :move_attempts  => 1000000,
         :warmer         => Mapper2.Place.DefaultSAWarm(0.95, 1.1, 0.99),
-        :cooler         => Mapper2.Place.DefaultSACool(0.99),
+        :cooler         => Mapper2.Place.AcceleratingSACool(0.999, 0.001, 0.9),
     )
 
     app_names = ("alexnet", "sort", "ldpc", "aes", "fft")
@@ -213,6 +214,7 @@ function bulk_test(nruns, nsamples)
     strategies = (KCStandard, KCNoWeight)
 
     tests_to_run = (asap4_tests,)
+    #tests_to_run = (asap3_tests, generic1_tests, generic2_tests)
 
     # Generate tests
     for f in tests_to_run

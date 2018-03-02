@@ -1,10 +1,10 @@
 using StatPlots
-#gr()
-pyplot()
+gr()
+#pyplot()
 using GZip, JSON
 
 # Helpful Filter Functiong
-isapp(d, app)   = d["meta"]["taskgraph"] == app
+isapp(d, app)   = d["meta"]["app_name"] == app
 isnlinks(d, n)  = d["meta"]["architecture_args"][1] == n
 ismode(d, mode) = d["meta"]["architecture_args"][2] == "AsapMapper.$mode"
 
@@ -43,8 +43,12 @@ function plot_results(filter, field, legend = :topright)
                 push!(dicts, j)
                 println("Using: ", filepath)
             end
-        catch
-            print_with_color(:red, "Error opening: ", filepath, "\n")
+        catch e
+            @warn """
+                Error opening $filepath
+
+                $e
+                """
         end
     end
 
@@ -54,7 +58,7 @@ function plot_results(filter, field, legend = :topright)
     series   = String[]
     first = true
     for (i,d) in enumerate(dicts)
-        data = [i[field] for i in d["data"]]
+        data = [minimum(j[field] for j in i["results"]) for i in d["data"]]
         push!(datasets, data)
         # Construct the series name for the set
         series_name = make_print_name(d)

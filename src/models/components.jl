@@ -99,8 +99,8 @@ function build_processor_tile(num_links,
         metadata = make_port_metadata()
         add_port(comp, "memory_in", "input", metadata = metadata)
         add_port(comp, "memory_out", "output", metadata = metadata)
-        connect_ports(comp, "processor.memory_out", "memory_out")
-        connect_ports(comp, "memory_in", "processor.memory_in")
+        add_link(comp, "processor.memory_out", "memory_out")
+        add_link(comp, "memory_in", "processor.memory_in")
     end
 
     # Interconnect - Don't attach metadata and let the routing routine fill in
@@ -110,7 +110,7 @@ function build_processor_tile(num_links,
     for dir in directions, i = 0:num_links-1
         mux_port = "$(dir)_mux[$i].out[0]"
         tile_port = "$(dir)_out[$i]"
-        connect_ports(comp, mux_port, tile_port)
+        add_link(comp, mux_port, tile_port)
     end
 
     # Circuit switch output links
@@ -118,14 +118,14 @@ function build_processor_tile(num_links,
         # Make the name for the processor.
         proc_port = "processor.$dir[$i]"
         mux_port = "$(dir)_mux[$i].in[0]"
-        connect_ports(comp, proc_port, mux_port)
+        add_link(comp, proc_port, mux_port)
     end
 
     # Connect input fifos.
     for i = 0:num_fifos-1
         fifo_port = "fifo_mux[$i].out[0]"
         proc_port = "processor.fifo[$i]"
-        connect_ports(comp, fifo_port, proc_port)
+        add_link(comp, fifo_port, proc_port)
     end
     # Connect input ports to inputs of muxes
 
@@ -166,7 +166,7 @@ function build_processor_tile(num_links,
                 index_tracker[key] += 1
             end
             # Add the connection to the component.
-            connect_ports(comp, source_port, sink_ports)
+            add_link(comp, source_port, sink_ports)
         end
     end
     check(comp)
