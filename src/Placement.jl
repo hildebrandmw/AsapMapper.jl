@@ -40,7 +40,7 @@ end
 
 # Costed metric functions
 function Mapper2.SA.edge_cost(::Type{KCStandard}, sa::SAStruct, edge::CostEdge)
-    src = sa.nodes[edge.source].address
-    dst = sa.nodes[edge.sink].address
+    src = Mapper2.SA.getaddress(sa.nodes[edge.source])
+    dst = Mapper2.SA.getaddress(sa.nodes[edge.sink])
     return  edge.cost * sa.distance[src, dst]
 end
