@@ -3,6 +3,25 @@ A collection of core components to be used in the Asap3, Asap4, and generic
 architectures.
 =#
 
+# Just putting this here for now.
+
+splatify(a::Tuple) = (splatify(a[1])..., splatify(a[2:end])...)
+splatify(a::Tuple{}) = ()
+splatify(a) = (a,)
+
+struct SplatWrapper{I}
+    iter::I 
+end
+
+Base.start(s::SplatWrapper) = start(s.iter)
+function Base.next(s::SplatWrapper, state) 
+    (ns, nextstate) = next(s.iter, state)
+    return (splatify(ns), nextstate)
+end
+Base.done(s::SplatWrapper, state) = done(s.iter, state)
+
+# annotate metadata
+
 function make_port_metadata(direction, class, num_links)
 
     x_spacing = 0.4/num_links

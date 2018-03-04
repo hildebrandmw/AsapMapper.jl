@@ -39,11 +39,27 @@ macro tc(e)
     end
 end
 
-@testset "Testing Whole Flow" begin
+@testset "Testing ASAP 4" begin
     # Build Architecture
     arch = AsapMapper.asap4(2, AsapMapper.KCStandard)
     # Create Taskgraph Constructor
     sdc = AsapMapper.CachedSimDump("alexnet")
+    taskgraph = AsapMapper.build_taskgraph(sdc)
+    taskgraph = AsapMapper.apply_transforms(taskgraph, sdc)
+
+    local m
+    @tc m = AsapMapper.NewMap(arch,taskgraph)
+    # Placement
+    @tc m = AsapMapper.place(m, move_attempts = 10000)
+    # Route
+    @tc m = AsapMapper.route(m)
+end
+
+@testset "Testing ASAP 3" begin
+    # Build Architecture
+    arch = AsapMapper.asap3(2, AsapMapper.KCStandard)
+    # Create Taskgraph Constructor
+    sdc = AsapMapper.CachedSimDump("fft")
     taskgraph = AsapMapper.build_taskgraph(sdc)
     taskgraph = AsapMapper.apply_transforms(taskgraph, sdc)
 

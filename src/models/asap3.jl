@@ -67,6 +67,7 @@ function asap3(num_links,A)
     add_child(arch, output_handler, CartesianIndex(1,34))
 
 	connect_processors(arch,num_links)
+    connect_io(arch,num_links)
 	connect_memories(arch)
 	return arch
 end
