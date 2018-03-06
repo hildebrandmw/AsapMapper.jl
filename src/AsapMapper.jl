@@ -5,16 +5,17 @@ const USEPLOTS = false
 using Mapper2
 using IterTools, JSON, GZip
 using MicroLogging
-using JLD
+using JLD2, FileIO
 
 # Set up directory paths
 const SRCDIR = @__DIR__
 const PKGDIR = dirname(SRCDIR)
-const RESULTS = joinpath(PKGDIR, "results/results.jld2")
+const RESULTS = joinpath(PKGDIR, "results")
 
 export  testmap,
         place,
-        route
+        route,
+        load_taskgraph
 
 # Helper Functions
 function oneofin(a,b)
@@ -64,19 +65,26 @@ abstract type AbstractKC <: AbstractArchitecture end
 struct KCNoWeight <: AbstractKC end
 struct KCStandard  <: AbstractKC end
 
+# Database
+include("Database.jl")
+
 # Architectures
 include("models/models.jl")
 
 # Include files
 include("Taskgraph.jl")
+include("Overloads.jl")
+
 include("Placement.jl")
 include("Routing.jl")
 
-include("RunFunctions.jl")
-include("Tests.jl")
-include("Results.jl")
+include("experiments/Experiments.jl")
 
-USEPLOTS && include("Plots.jl")
+#include("RunFunctions.jl")
+#include("Tests.jl")
+#include("Results.jl")
+
+#USEPLOTS && include("Plots.jl")
 
 ################################################################################
 # Useful for testing and debugging
