@@ -5,16 +5,17 @@ const USEPLOTS = false
 using Mapper2
 using IterTools, JSON, GZip
 using MicroLogging
-using JLD2
+using JLD2, FileIO
 
 # Set up directory paths
 const SRCDIR = @__DIR__
 const PKGDIR = dirname(SRCDIR)
-const RESULTS = joinpath(PKGDIR, "results/results.jld2")
+const RESULTS = joinpath(PKGDIR, "results")
 
 export  testmap,
         place,
-        route
+        route,
+        load_taskgraph
 
 # Helper Functions
 function oneofin(a,b)

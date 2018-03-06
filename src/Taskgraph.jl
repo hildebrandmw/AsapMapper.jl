@@ -1,4 +1,10 @@
 abstract type TaskgraphConstructor end
+
+"""
+    load_taskgraph(name)
+
+Load the sim-dumpe taskgraph with the given name.
+"""
 function load_taskgraph(name)
     @info "Loading Taskgraph: $name"
     constructor = CachedSimDump(name)

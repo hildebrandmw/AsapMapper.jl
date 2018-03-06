@@ -9,9 +9,8 @@ function shotgun_placement(arch     ::TopLevel,
 
     @info "Total Placements: $(nplacements)"
     # closure for parallel placement 
-    p(x) = low_temp_placement(arch, taskgraph;
-                              iteration_number  = x,
-                              nsamples          = nsamples,
+    p(x) = low_temp_placement(arch, taskgraph, x;
+                              nsamples = nsamples,
                               kwargs...)
 
     # Parallelize placements
@@ -28,24 +27,24 @@ function low_temp_placement(arch            ::TopLevel,
     # Construct a new Map object
     m = NewMap(arch, taskgraph)
     # Get the placement structure
-    pstruct = placement_algorithm(m)
+    pstruct = SAStruct(m)
     # Scope "state" out of the loop to avoid renaming.
     local state
     for i = 1:nsamples
         if i == 1
-            state = place(pstruct; place_kwargs...)
+            state = SA.place(pstruct; place_kwargs...)
         else
-            place(pstruct;
-                 place_kwargs...,
-                 supplied_state = state,
-                 warmer = Mapper2.Place.TrueSAWarm()
+            SA.place(pstruct;
+                    place_kwargs...,
+                    supplied_state = state,
+                    warmer = SA.TrueSAWarm()
                 )
         end
-        Mapper2.Place.record(m, pstruct)
+        Mapper2.SA.record(m, pstruct)
 
         # serialize to temp/ dir so routing can find it.
         savename    = "$(iteration_number)_$(i)"
         save_path   = joinpath(PKGDIR, "temp", savename)
-        Mapper2.MapType.save(m, save_path)
+        Mapper2.MapperCore.save(m, save_path)
     end
 end

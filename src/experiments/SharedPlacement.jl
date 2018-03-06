@@ -38,33 +38,39 @@ end
 function run(ex::SharedPlacement, dir::String = results_dir())
     dir = augment(dir,ex)
     # Create the first architecture for placement
-    firstarch = (ex.arch)(first(ex.arch_args)...; first(ex.arch_kwargs)...)
+    fn = FunctionCall(ex.arch, first(ex.arch_args), first(ex.arch_kwargs))
+    firstarch = call(fn)
     app = call(ex.app)
     # placement
     call(ex.place, firstarch, app)
     # Iterate through all architectures routing each.
     for (args,kwargs) in zip(ex.arch_args, ex.arch_kwargs)
-        arch = (ex.arch)(args...; kwargs...)
+        constructor = FunctionCall(ex.arch, args, kwargs)
+        arch = call(constructor)
         results = call(ex.route, arch, app)
         # make a results struct 
         arch_fcall = FunctionCall(ex.arch, args, kwargs)
         results_struct = SharedPlacementResult(arch_fcall, ex.app, results)
-        save(results_struct)
+        save(results_struct, dir)
     end
-    save(ex)
+    save(ex, dir)
 end
 
 function testrun()
     arch        = asap4 
     arch_args   = [(2,KCStandard),
-                   (3,KCStanrard)]
-    arch_kwargs = Dict{String,Any}[]
+                   (3,KCStandard)]
+    arch_kwargs = [Dict{String,Any}(),Dict{String,Any}()]
 
-    app     = FunctionCall(load_taskgraph, ("alexnet"))
-    place   = FunctionCall(shotgun_placement)
-    route   = FunctionCall(low_temp_route)
+    app     = FunctionCall(load_taskgraph, ("alexnet",))
+
+    pnr_kwargs = Dict(
+        :nplacements => 2,
+        :nsamples    => 2
+     )
+    place   = FunctionCall(shotgun_placement, (), pnr_kwargs)
+    route   = FunctionCall(low_temp_route, (), pnr_kwargs)
 
     expr = SharedPlacement(arch, arch_args, arch_kwargs, app, place, route)
-
     run(expr)
 end
