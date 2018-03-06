@@ -1,21 +1,22 @@
 module AsapMapper
 
-#const USEPLOTS = true
+const USEPLOTS = false
 
 using Mapper2
 using IterTools, JSON, GZip
 using MicroLogging
+using JLD
 
 # Set up directory paths
 const SRCDIR = @__DIR__
 const PKGDIR = dirname(SRCDIR)
-const RESULTS_DIR = joinpath(PKGDIR, "results")
+const RESULTS = joinpath(PKGDIR, "results/results.jld2")
 
 export  testmap,
         place,
         route
 
-# Helpful Functions
+# Helper Functions
 function oneofin(a,b)
     for i in a
         i in b && return true
@@ -71,13 +72,54 @@ include("Taskgraph.jl")
 include("Placement.jl")
 include("Routing.jl")
 
-# Custom save format for the Project Manager
-include("MapDump.jl")
-
 include("RunFunctions.jl")
 include("Tests.jl")
 include("Results.jl")
 
-include("Plots.jl")
+USEPLOTS && include("Plots.jl")
+
+################################################################################
+# Useful for testing and debugging
+################################################################################
+
+function testmap()
+
+    #arch = asap4(2, KCStandard)
+    #arch = asap3_hex(2, KCStandard)
+    arch = asap3(2, KCStandard)
+    #arch = generic(16,16,4,12, KCStandard)
+
+    tg = load_taskgraph("sort")
+    return NewMap(arch, tg)
+end
+
+################################################################################
+# Generic Place and Route function.
+################################################################################
+
+function place_and_route(architecture, profile_path, dump_path)
+    # Initialize an uncompressed taskgraph constructor
+    tc = SimDumpConstructor{false}("blank", profile_path)
+    t = build_taskgraph(tc)
+
+    # Dispatch architecture
+    if architecture == "asap4"
+        a = asap4(2, KCStandard)
+    elseif architecture == "asap3"
+        a = asap3(2, KCNoWeight)
+    else
+        KeyError("Architecture $architecture not implemented.")
+    end
+
+    # Build the Map
+    m = NewMap(a, t)
+    # Run placement
+    m = place(m)
+    # Run Routing
+    m = route(m)
+    # Dump mapping to given dump path
+    Mapper2.save(m, dump_path, false)
+end
+
 
 end # module

@@ -1,60 +1,12 @@
-################################################################################
-# MAIN PLACE AND ROUTE FUNCTION
-################################################################################
-function place_and_route(architecture, profile_path, dump_path)
-    # Initialize an uncompressed taskgraph constructor
-    tc = SimDumpConstructor{false}("blank", profile_path)
-    t = build_taskgraph(tc)
-
-    # Dispatch architecture
-    if architecture == "asap4"
-        a = asap4(2, KCStandard)
-    elseif architecture == "asap3"
-        a = asap3(2, KCNoWeight)
-    else
-        KeyError("Architecture $architecture not implemented.")
-    end
-
-    # Build the Map
-    m = NewMap(a, t)
-
-    # Run placement
-    m = place(m)
-
-    # Run Routing
-    m = route(m)
-
-    # Dump mapping to given dump path
-    Mapper2.save(m, dump_path, false)
-end
-
-function load_taskgraph(name)
-    @info "Loading Taskgraph: $name"
-    constructor = CachedSimDump(name)
-    return build_taskgraph(constructor)
-end
-
-function testmap()
-    options = Dict{Symbol, Any}()
-    println("Building Architecture")
-    arch = asap4(2, KCStandard)
-    #arch = asap3_hex(2, KCStandard)
-    #arch = asap3(2, KCStandard)
-    #arch = generic(16,16,4,12, KCStandard)
-    tg = load_taskgraph("alexnet")
-    m = NewMap(arch, tg)
-    return m
-end
-
 struct PlacementTest
-    arch_constructor::Function
-    arch_args       ::Vector{Any}
-    place_type      ::String
-    taskgraph       ::Taskgraph
-    place_kwargs    ::Dict{Symbol,Any}
-    num_placements  ::Int64
+    arch_constructor    ::Function
+    arch_args           ::Vector{Any}
+    place_type          ::String
+    taskgraph           ::Taskgraph
+    place_kwargs        ::Dict{Symbol,Any}
+    num_placements      ::Int64
     low_temp_samples    ::Int64
-    metadata        ::Dict{String,Any}
+    metadata            ::Dict{String,Any}
 end
 
 function run(t::PlacementTest)
@@ -102,21 +54,26 @@ function run(t::PlacementTest)
     end
 end
 
-function generate_placement(arch_constructor,
-                            arch_args,
-                            taskgraph::Taskgraph,
-                            place_kwargs,
-                            low_temp_runs::Int,
-                            iter::Int)
-    @info "Sublacement iteration $iter"
-    # Build Architecture
-    arch = arch_constructor(arch_args...)
+function shotgun(
+                )
+    @info "Total Placements: $(nplacements)"
+
+    # 
+end
+
+function low_temp_placement(arch        ::TopLevel,
+                            taskgraph   ::Taskgraph,
+                            iteration_number::Int;
+                            nsamples = 1,
+                            place_kwargs...)
+    @info "Sublacement iteration $iteration_number"
     # Construct a new Map object
     m = NewMap(arch, taskgraph)
     # Get the placement structure
     pstruct = placement_algorithm(m)
+    # Scope "state" out of the loop to avoid renaming.
     local state
-    for i = 1:low_temp_runs
+    for i = 1:nsamples
         if i == 1
             state = place(pstruct; place_kwargs...)
         else
@@ -127,24 +84,17 @@ function generate_placement(arch_constructor,
                 )
         end
         Mapper2.Place.record(m, pstruct)
-        savename = "$(iter)_$(i)"
-        save_path = joinpath(PKGDIR, "saved", savename)
+        savename = "$(iteration_number)_$(i)"
+        save_path = joinpath(PKGDIR, "temp", savename)
         Mapper2.MapType.save(m, save_path)
     end
-
-    # Save the resulting placement to file.
-    return nothing
 end
 
-function run_routing(arch_constructor,
-                     arch_args,
-                     taskgraph::Taskgraph,
-                     low_temp_runs::Int,
-                     iter::Int)
+function route(arch::TopLevel,
+               taskgraph::Taskgraph,
+               iteration_number;
+               nsamples = 1) 
 
-    # Build Architecture
-    arch = arch_constructor(arch_args...)
-    # Construct a new Map object
     m = NewMap(arch, taskgraph)
 
     # Initialize the statistics dictionary to pessimistically assume that
@@ -156,8 +106,8 @@ function run_routing(arch_constructor,
      )
 
     for i in 1:low_temp_runs
-        @info "Subrouting $iter: on $i of $low_temp_runs"
-        load_path = joinpath(PKGDIR, "saved", "$(iter)_$(i)")
+        @info "Subrouting $iteration_number: on $i of $nsamples"
+        load_path = joinpath(PKGDIR, "temp", "$(iter)_$(i)")
         Mapper2.MapType.load(m, load_path)
         success = false
         try
