@@ -9,6 +9,9 @@ Specifically:
     - Custom placement TwoChannel edge that contains a "cost" field for 
         annotating important links. Also provides a custom "edge_cost" method
         for this new type of link.
+
+    - Custom routing channel with a cost field.
+
 =#
 
 ################################################################################
@@ -16,7 +19,7 @@ Specifically:
 ################################################################################
 
 const TN = TaskgraphNode
-const AKC = AbsrractKC
+const AKC = AbstractKC
 
 function Mapper2.ismappable(::Type{T}, c::Component) where {T <: AKC}
     return haskey(c.metadata, "attributes") && length(c.metadata["attributes"]) > 0
@@ -60,8 +63,8 @@ end
 
 # Costed metric functions
 function Mapper2.SA.edge_cost(::Type{KCStandard}, sa::SAStruct, edge::CostEdge)
-    src = Mapper2.SA.getaddress(sa.nodes[edge.source])
-    dst = Mapper2.SA.getaddress(sa.nodes[edge.sink])
+    src = getaddress(sa.nodes[edge.source])
+    dst = getaddress(sa.nodes[edge.sink])
     return  edge.cost * sa.distance[src, dst]
 end
 

@@ -7,3 +7,4 @@ backup/*
 *.pickle
 *.swp
 *.png
+*.jld2

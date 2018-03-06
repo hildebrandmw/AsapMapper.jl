@@ -5,7 +5,7 @@ const USEPLOTS = false
 using Mapper2
 using IterTools, JSON, GZip
 using MicroLogging
-using JLD
+using JLD2
 
 # Set up directory paths
 const SRCDIR = @__DIR__
@@ -64,19 +64,26 @@ abstract type AbstractKC <: AbstractArchitecture end
 struct KCNoWeight <: AbstractKC end
 struct KCStandard  <: AbstractKC end
 
+# Database
+include("Database.jl")
+
 # Architectures
 include("models/models.jl")
 
 # Include files
 include("Taskgraph.jl")
+include("Overloads.jl")
+
 include("Placement.jl")
 include("Routing.jl")
 
-include("RunFunctions.jl")
-include("Tests.jl")
-include("Results.jl")
+include("experiments/Experiments.jl")
 
-USEPLOTS && include("Plots.jl")
+#include("RunFunctions.jl")
+#include("Tests.jl")
+#include("Results.jl")
+
+#USEPLOTS && include("Plots.jl")
 
 ################################################################################
 # Useful for testing and debugging
