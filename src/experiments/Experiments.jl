@@ -14,13 +14,23 @@ const _exprfile = "expr.jls.gz"
 dirstring(::Experiment) = "experiment"
 
 results_dir() = joinpath(RESULTS, string(Date(now())))
-stripped_contents(dir::String) = [first(splitext(i)) for i in readdir(dir)]
+stripped_contents(dir::String) = [first(gzsplitext(i)) for i in readdir(dir)]
+
+function gzsplitext(s)
+    y,z = splitext(s)
+    if z == ".gz"
+        x,y = splitext(y)
+        return x, y*z
+    end
+    return y,z
+end
+
 
 function augment(dir::String, new::String)
     dir = isempty(dir) ? "." : dir
     ispath(dir) || mkdir(dir)
 
-    prefix, ext = splitext(new)
+    prefix, ext = gzsplitext(new)
     newprefix = append_suffix(stripped_contents(dir), prefix)
 
     return joinpath(dir, newprefix*ext)

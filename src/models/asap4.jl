@@ -86,6 +86,13 @@ function connect_processors(tl, num_links)
     src_rule = fn
     dst_rule = fn
 
+    # Build metadata dictionary for capacity and cost
+    metadata = Dict(
+        "cost"      => 1.0,
+        "capacity"  => 1,
+        "network"   => ["circuit_switched"]
+    )
+
     # Create offset rules.
     offsets = [CartesianIndex(-1,0), 
                CartesianIndex(1,0), 

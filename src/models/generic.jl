@@ -269,23 +269,43 @@ function connect_processors_generic(tl,dimension)
     # General rule - we're looking for the attribute "processor" to be somewhere
     # in the component stack. If so, we'll try to connect all of the circuit
     # switched ports.
-    src_key = "attributes"
-    src_val = ["processor", "input_handler", "output_handler"]
-    src_fn = oneofin
-    src_rule = PortRule(src_key, src_val, src_fn)
-    dst_rule = src_rule
+    vals = ["processor", "input_handler", "output_handler"]
+    fn = x -> search_metadata!(x, "attributes", vals, oneofin)
+    src_rule = fn
+    dst_rule = fn
+
+    # Build metadata dictionary for capacity and cost
+    metadata = Dict(
+        "cost"      => 1.0,
+        "capacity"  => 1,
+        "network"   => ["circuit_switched"]
+    )
+
     # Create offset rules.
     # Offsets are just unit steps in four directions.
-    offsets2d = [CartesianIndex(-1,0,0), CartesianIndex(1,0,0), CartesianIndex(0,1,0),
-                CartesianIndex(0,-1,0)]
-    offsets3d = [CartesianIndex(-1,0,0), CartesianIndex(1,0,0), CartesianIndex(0,1,0),
-                CartesianIndex(0,-1,0), CartesianIndex(0,0,1), CartesianIndex(0,0,-1)]
+    offsets2d = [CartesianIndex(-1,0,0), 
+                 CartesianIndex(1,0,0), 
+                 CartesianIndex(0,1,0),
+                 CartesianIndex(0,-1,0)
+                ]
+
+    offsets3d = [CartesianIndex(-1,0,0), 
+                 CartesianIndex(1,0,0), 
+                 CartesianIndex(0,1,0),
+                 CartesianIndex(0,-1,0), 
+                 CartesianIndex(0,0,1), 
+                 CartesianIndex(0,0,-1)
+                ]
+
     offsets = (offsets2d,offsets3d)
+
+
     #=
     Create two tuples for the source ports and destination ports. In general,
     if the source link is going out of the north port, the destionation will
     be coming in the south port.
     =#
+
     src_dirs2d = ("north", "south", "east", "west")
     dst_dirs2d = ("south", "north", "west", "east")
     src_dirs3d = ("north", "south", "east", "west", "top", "bottom")
@@ -293,21 +313,23 @@ function connect_processors_generic(tl,dimension)
     src_dirs = (src_dirs2d,src_dirs3d)
     dst_dirs = (dst_dirs2d,dst_dirs3d)
 
-    offset_rules = OffsetRule[]
+    offset_rules = []
     for (offset, src, dst) in zip(offsets[dimension-1], src_dirs[dimension-1],
     dst_dirs[dimension-1])
         src_ports = String[]
         dst_ports = String[]
         # Iterate through the number of source and destination ports.
         for i in 0:1
-            src_port = src * "_out[" * string(i) * "]"
+            src_port = "$(src)_out[$i]"
             push!(src_ports, src_port)
-            dst_port = dst * "_in[" * string(i) * "]"
+            dst_port = "$(dst)_in[$i]"
             push!(dst_ports, dst_port)
         end
         # Create the offset rule and add it to the collection
-        new_rule = OffsetRule([offset], src_ports, dst_ports)
-        push!(offset_rules, new_rule)
+        orule = Splatter(Iterators.product( (offset,),
+                                            zip(src_ports,dst_ports)
+                                          ))
+        connection_rule(tl, orule, src_rule, dst_rule, metadata = metadata)
     end
     # Create offset rules for the input and output handlers.
     # Input and output handlers only appear on the left and right hand sides
@@ -321,27 +343,22 @@ function connect_processors_generic(tl,dimension)
         dst_ports = String[]
         for i in 0:1
             # Input handler -> processor
-            src_port = "out[" * string(i) * "]"
-            dst_port = dst * "_in[" * string(i) * "]"
+            src_port = "out[$i]"
+            dst_port = "$(dst)_in[$i]"
             push!(src_ports, src_port)
             push!(dst_ports, dst_port)
             # processor -> output handler
-            src_port = src * "_out[" * string(i) * "]"
-            dst_port = "in[" * string(i) * "]"
+            src_port = "$(src)_out[$i]"
+            dst_port = "in[$i]"
             push!(src_ports, src_port)
             push!(dst_ports, dst_port)
         end
-        new_rule = OffsetRule([offset], src_ports, dst_ports)
-        push!(offset_rules, new_rule)
+        orule = Splatter(Iterators.product( (offset,),
+                                            zip(src_ports,dst_ports)
+                                          ))
+
+        connection_rule(tl, orule, src_rule, dst_rule, metadata = metadata)
     end
-    # Build metadata dictionary for capacity and cost
-    metadata = Dict(
-        "cost"      => 1.0,
-        "capacity"  => 1,
-        "network"   => ["circuit_switched"]
-    )
-    # Launch the function call!
-    connection_rule(tl, offset_rules, src_rule, dst_rule, metadata = metadata)
     return nothing
 end
 
@@ -355,53 +372,32 @@ function connect_memories_generic(tl)
     ###########################
     # Connect 2 port memories #
     ###########################
-    # Create rule for the memory processors
-    proc_key = "attributes"
-    proc_val = "memory_processor"
-    proc_fn = in
-    proc_rule = PortRule(proc_key, proc_val, proc_fn)
-    # Create rule for the 2-port memories.
-    mem_key = "attributes"
-    mem_val = "memory_2port"
-    mem_fn  = in
-    mem_rule = PortRule(mem_key, mem_val, mem_fn)
+    proc_rule = x -> search_metadata!(x, "attributes", "memory_processor", in)
+    mem_rule  = x -> search_metadata!(x, "attributes", "memory_2port", in)
     # Make connections from memory to memory-processors
-    offset_rules = OffsetRule[]
-    push!(offset_rules, OffsetRule(CartesianIndex(-1, 0,0), "out[0]", "memory_in"))
-    push!(offset_rules, OffsetRule(CartesianIndex(-1, 1,0), "out[1]", "memory_in"))
-    push!(offset_rules, OffsetRule(CartesianIndex( 1, 0,0), "out[0]", "memory_in"))
-    push!(offset_rules, OffsetRule(CartesianIndex( 1, 1,0), "out[1]", "memory_in"))
-    push!(offset_rules, OffsetRule(CartesianIndex( 0, 1,0), "out[0]", "memory_in"))
-    push!(offset_rules, OffsetRule(CartesianIndex( 1, 1,0), "out[1]", "memory_in"))
-    push!(offset_rules, OffsetRule(CartesianIndex( 0,-1,0), "out[0]", "memory_in"))
-    push!(offset_rules, OffsetRule(CartesianIndex( 1,-1,0), "out[1]", "memory_in"))
+    offset_rules = [
+        (CartesianIndex(-1, 0,0), "out[0]", "memory_in"),
+        (CartesianIndex(-1, 1,0), "out[1]", "memory_in"),
+        (CartesianIndex( 1, 0,0), "out[0]", "memory_in"),
+        (CartesianIndex( 1, 1,0), "out[1]", "memory_in"),
+        (CartesianIndex( 0, 1,0), "out[0]", "memory_in"),
+        (CartesianIndex( 1, 1,0), "out[1]", "memory_in"),
+        (CartesianIndex( 0,-1,0), "out[0]", "memory_in"),
+        (CartesianIndex( 1,-1,0), "out[1]", "memory_in"),
+       ]
     connection_rule(tl, offset_rules, mem_rule, proc_rule, metadata = metadata)
 
     # Make connections from memory-processors to memories.
-    offset_rules = OffsetRule[]
-    push!(offset_rules, OffsetRule(CartesianIndex( 1, 0,0), "memory_out", "in[0]"))
-    push!(offset_rules, OffsetRule(CartesianIndex( 1,-1,0), "memory_out", "in[1]"))
-    push!(offset_rules, OffsetRule(CartesianIndex(-1, 0,0), "memory_out", "in[0]"))
-    push!(offset_rules, OffsetRule(CartesianIndex(-1,-1,0), "memory_out", "in[1]"))
-    push!(offset_rules, OffsetRule(CartesianIndex( 0,-1,0), "memory_out", "in[0]"))
-    push!(offset_rules, OffsetRule(CartesianIndex(-1,-1,0), "memory_out", "in[1]"))
-    push!(offset_rules, OffsetRule(CartesianIndex( 0, 1,0), "memory_out", "in[0]"))
-    push!(offset_rules, OffsetRule(CartesianIndex(-1, 1,0), "memory_out", "in[1]"))
-    connection_rule(tl, offset_rules, proc_rule, mem_rule, metadata = metadata)
-
-    ###########################
-    # Connect 1 port memories #
-    ###########################
-    # Change the memory attribute requirement to a 1 port memory.
-    mem_val = "memory_1port"
-    mem_rule = PortRule(mem_key, mem_val, mem_fn)
-    # Make connections from memory to memory-processors
-    offset_rules = OffsetRule[]
-    push!(offset_rules, OffsetRule(CartesianIndex(-1,0,0), "out[0]", "memory_in"))
-    connection_rule(tl, offset_rules, mem_rule, proc_rule, metadata = metadata)
-    # Make connections from memory-processors to memories.
-    offset_rules = OffsetRule[]
-    push!(offset_rules, OffsetRule(CartesianIndex(1,0,0), "memory_out", "in[0]"))
+    offset_rules = [
+        (CartesianIndex( 1, 0,0), "memory_out", "in[0]"),
+        (CartesianIndex( 1,-1,0), "memory_out", "in[1]"),
+        (CartesianIndex(-1, 0,0), "memory_out", "in[0]"),
+        (CartesianIndex(-1,-1,0), "memory_out", "in[1]"),
+        (CartesianIndex( 0,-1,0), "memory_out", "in[0]"),
+        (CartesianIndex(-1,-1,0), "memory_out", "in[1]"),
+        (CartesianIndex( 0, 1,0), "memory_out", "in[0]"),
+        (CartesianIndex(-1, 1,0), "memory_out", "in[1]"),
+       ]
     connection_rule(tl, offset_rules, proc_rule, mem_rule, metadata = metadata)
 
     return nothing

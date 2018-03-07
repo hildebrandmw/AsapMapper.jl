@@ -5,7 +5,7 @@ const USEPLOTS = false
 using Mapper2
 using IterTools, JSON, GZip
 using MicroLogging
-using JLD2, FileIO
+#using JLD2, FileIO
 
 # Set up directory paths
 const SRCDIR = @__DIR__
@@ -15,7 +15,24 @@ const RESULTS = joinpath(PKGDIR, "results")
 export  testmap,
         place,
         route,
-        load_taskgraph
+        # Taskgraph constructors
+        load_taskgraph,
+        # Architecture constructors
+        asap4,
+        asap3,
+        # Architecture types
+        KCStandard,
+        KCNoWeight,
+        # Experiments
+        Experiment,
+        SharedPlacement,
+        # Results
+        Result,
+        SharedPlacementResult,
+        # Misc
+        FunctionCall,
+        call
+
 
 # Helper Functions
 function oneofin(a,b)
@@ -80,11 +97,8 @@ include("Routing.jl")
 
 include("experiments/Experiments.jl")
 
-#include("RunFunctions.jl")
-#include("Tests.jl")
-#include("Results.jl")
+#include("Plots.jl")
 
-#USEPLOTS && include("Plots.jl")
 
 ################################################################################
 # Useful for testing and debugging
@@ -94,8 +108,8 @@ function testmap()
 
     #arch = asap4(2, KCStandard)
     #arch = asap3_hex(2, KCStandard)
-    arch = asap3(2, KCStandard)
-    #arch = generic(16,16,4,12, KCStandard)
+    #arch = asap3(3, KCStandard)
+    arch = generic(16,16,4,12, KCStandard)
 
     tg = load_taskgraph("sort")
     return NewMap(arch, tg)
