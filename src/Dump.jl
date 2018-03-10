@@ -125,7 +125,7 @@ function extract_routings(m)
 
         # Kind of gross method for getting the network id.
         src_port_path = first(Mapper2.Helper.source_vertices(graph))
-        network_id = get(m.architecture[src_port_path].metadata,"network_id",missing)
+        network_id = get(m.architecture[src_port_path].metadata,"network_id",0)
 
         index = edge.metadata["source_index"]
         # Save result
