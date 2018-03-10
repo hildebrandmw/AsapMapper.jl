@@ -29,12 +29,6 @@ end
 
 dirstring(::SharedPlacement) = "shared_placement"
 
-struct SharedPlacementResult <: Result
-    arch        ::FunctionCall
-    app         ::FunctionCall
-    mappings    ::Vector{Vector{Mapping}}
-end
-
 function run(ex::SharedPlacement, dir::String = results_dir())
     dir = augment(dir,ex)
     # Create the first architecture for placement
@@ -50,7 +44,7 @@ function run(ex::SharedPlacement, dir::String = results_dir())
         results = call(ex.route, arch, app)
         # make a results struct 
         arch_fcall = FunctionCall(ex.arch, args, kwargs)
-        results_struct = SharedPlacementResult(arch_fcall, ex.app, results)
+        results_struct = SimpleResult(arch_fcall, ex.app, results)
         save(results_struct, dir)
     end
     save(ex, dir)

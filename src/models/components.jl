@@ -17,14 +17,11 @@ function Base.next(s::Splatter, state)
 end
 Base.done(s::Splatter, state) = done(s.iter, state)
 
-
 # annotate metadata
 
 function make_port_metadata(direction, class, num_links)
-
     x_spacing = 0.4/num_links
     y_spacing = 0.4/num_links
-
     if direction in ("east", "west")
         if class == "input" 
             if direction == "east"
@@ -224,8 +221,9 @@ function build_processor(num_links,include_memory = false)
     # Add the input fifos
     add_port(component, "fifo", "input", 2)
     # Add the output ports
+    metadata = [Dict("network_id" => i-1) for i in 1:num_links]
     for str in ("north", "east", "south", "west")
-        add_port(component, str, "output", num_links)
+        add_port(component, str, "output", num_links, metadata = metadata)
     end
     # Add the dynamic circuit switched network
     add_port(component, "dynamic", "output")
@@ -301,7 +299,9 @@ function build_input_handler(num_links)
     metadata["attributes"] = ["input_handler"]
     component = Component("input_handler", primitive = "", metadata = metadata)
     # Add the input and output ports
-    add_port(component, "out", "output", num_links, metadata = make_port_metadata())
+    base_metadata = make_port_metadata()
+    metadata = [merge(base_metadata, Dict("network_id" => i-1)) for i in 1:num_links]
+    add_port(component, "out", "output", num_links, metadata = metadata)
     # Return the created type
     return component
 end
@@ -315,8 +315,9 @@ function build_output_handler(num_links)
     metadata["attributes"] = ["output_handler"]
     component = Component("output_handler", primitive = "", metadata = metadata)
     # Add the input and output ports
-    port_metadata = make_port_metadata()
-    add_port(component, "in", "input", num_links, metadata = port_metadata)
+    base_metadata = make_port_metadata()
+    metadata = [merge(base_metadata, Dict("network_id" => i-1)) for i in 1:num_links]
+    add_port(component, "in", "input", num_links, metadata = metadata)
     # Return the created type
     return component
 end

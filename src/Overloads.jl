@@ -26,7 +26,7 @@ function Mapper2.ismappable(::Type{T}, c::Component) where {T <: AKC}
 end
 
 function Mapper2.isspecial(::Type{T}, t::TN) where {T <: AKC}
-    return oneofin(t.metadata["required_attributes"], _special_attributes)
+    return in(t.metadata["required_attributes"], _special_attributes)
 end
 
 function Mapper2.isequivalent(::Type{T}, a::TN, b::TN) where {T <: AKC}
@@ -36,7 +36,7 @@ end
 
 function Mapper2.canmap(::Type{T}, t::TN, c::Component) where {T <: AKC}
     haskey(c.metadata, "attributes") || return false
-    return issubset(t.metadata["required_attributes"], c.metadata["attributes"])
+    return in(t.metadata["required_attributes"], c.metadata["attributes"])
 end
 
 ################################################################################

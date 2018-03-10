@@ -9,35 +9,22 @@ call(f::FunctionCall, args...) = (f.f)(args..., f.args...; f.kwargs...)
 abstract type Experiment end
 abstract type Result end
 
+################################################################################
+# Includes
+################################################################################
+include("Simple.jl")
+include("SharedPlacement.jl")
+include("MultiArch.jl")
+
+################################################################################
+# Saving
+################################################################################
+
 const _datafile = "data.jls.gz"
 const _exprfile = "expr.jls.gz"
 dirstring(::Experiment) = "experiment"
 
 results_dir() = joinpath(RESULTS, string(Date(now())))
-stripped_contents(dir::String) = [first(gzsplitext(i)) for i in readdir(dir)]
-
-function gzsplitext(s)
-    y,z = splitext(s)
-    if z == ".gz"
-        x,y = splitext(y)
-        return x, y*z
-    end
-    return y,z
-end
-
-
-function augment(dir::String, new::String)
-    dir = isempty(dir) ? "." : dir
-    ispath(dir) || mkdir(dir)
-
-    prefix, ext = gzsplitext(new)
-    newprefix = append_suffix(stripped_contents(dir), prefix)
-
-    return joinpath(dir, newprefix*ext)
-end
-
-# Fallback experiment based augment function
-augment(dir::String, ex::Experiment) = augment(dir, dirstring(ex))
 
 function save(exp::Experiment, dir::String)
     ispath(dir) || mkpath(dir)      
@@ -62,6 +49,50 @@ function save(r::Result, dir::String)
 end
 
 ################################################################################
-# Includes
+# Helper functions
 ################################################################################
-include("SharedPlacement.jl")
+stripped_contents(dir::String) = [first(gzsplitext(i)) for i in readdir(dir)]
+number_regex(str) = Regex("(?<=$(str)_)\\d+")
+
+function append_suffix(iter, key::String)
+    rgx = number_regex(key)
+
+    matches = Int[]
+    for k in iter
+        attach!(matches, match(rgx, k)) 
+    end
+
+    return length(matches) == 0 ? "$(key)_1" : "$(key)_$(1+maximum(matches))"
+end
+
+attach!(a, m) = nothing
+function attach!(a::Vector{T}, m::RegexMatch) where T 
+    val = tryparse(T, m.match)
+    if !isnull(val)
+        push!(a, val.value)
+    end
+end
+
+function gzsplitext(s)
+    y,z = splitext(s)
+    if z == ".gz"
+        x,y = splitext(y)
+        return x, y*z
+    end
+    return y,z
+end
+
+
+function augment(dir::String, new::String)
+    dir = isempty(dir) ? "." : dir
+    ispath(dir) || mkdir(dir)
+
+    prefix, ext = gzsplitext(new)
+    newprefix = append_suffix(stripped_contents(dir), prefix)
+
+    return joinpath(dir, newprefix*ext)
+end
+
+# Fallback experiment based augment function
+augment(dir::String, ex::Experiment) = augment(dir, dirstring(ex))
+

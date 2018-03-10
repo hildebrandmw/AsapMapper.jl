@@ -4,7 +4,7 @@ function testrun(dir)
                    (3,KCStandard)]
     arch_kwargs = [Dict{String,Any}(),Dict{String,Any}()]
 
-    app     = FunctionCall(load_taskgraph, ("alexnet",))
+    app     = FunctionCall((AsapMapper.build_taskgraph∘AsapMapper.PMConstructor), ("mapper_in.json",))
 
     pnr_kwargs = Dict(
         :nplacements => 2,
@@ -19,6 +19,8 @@ end
 
 @testset "Testing Shared Placement" begin
     dir = "bubbagump"
+    # remove it incase past tests failed.
+    ispath(dir) && rm(dir, recursive = true)
     testrun(dir)
 
     @test ispath("$dir/shared_placement_1")
@@ -32,15 +34,13 @@ end
     close(f)
 
     @test expr.arch == asap4
-    @test expr.app.f == load_taskgraph
-    @test expr.app.args == ("alexnet",)
 
     f = GZip.open("$dir/shared_placement_1/data_2.jls.gz")
     x = deserialize(f)
     close(f)
 
     m = Mapper2.NewMap(call(x.arch), call(x.app))
-    m.mapping = first(first(x.mappings))
+    m.mapping = first(first(x.mapping))
 
     @test Mapper2.check_routing(m)
     Mapper2.MapperCore.report_routing_stats(m)

@@ -9,14 +9,14 @@ function asap4(num_links, A)
     # Normal Processor #
     ####################
     processor = build_processor_tile(num_links)
-    for r in 1:24, c in 2:28
+    for r in 2:25, c in 2:28
         if multiple_copies
             add_child(arch, deepcopy(processor), CartesianIndex(r,c))
         else
             add_child(arch, processor, CartesianIndex(r,c))
         end
     end
-    for r in 1:20, c in 29
+    for r in 2:21, c in 29
         if multiple_copies
             add_child(arch, deepcopy(processor), CartesianIndex(r,c))
         else
@@ -28,7 +28,7 @@ function asap4(num_links, A)
     # Memory Processor #
     ####################
     memory_processor = build_memory_processor_tile(num_links)
-    for r = 25, c = 2:28
+    for r = 26, c = 2:28
         if multiple_copies
             add_child(arch, deepcopy(memory_processor), CartesianIndex(r,c))
         else
@@ -40,7 +40,7 @@ function asap4(num_links, A)
     # 2 Port Memory #
     #################
     memory_2port = build_memory_2port()
-    for r = 26, c in (2, 4, 6, 8, 11, 13, 15, 17, 20, 22, 24, 26)
+    for r = 27, c in (2, 4, 6, 8, 11, 13, 15, 17, 20, 22, 24, 26)
         add_child(arch, memory_2port, CartesianIndex(r,c))
     end
 
@@ -48,7 +48,7 @@ function asap4(num_links, A)
     # 1 Port Memory #
     #################
     memory_1port = build_memory_1port()
-    for r = 26, c in (10, 19)
+    for r = 27, c in (10, 19)
         add_child(arch, memory_1port, CartesianIndex(r,c))
     end
 
@@ -56,17 +56,17 @@ function asap4(num_links, A)
     # Input Handler #
     #################
     input_handler = build_input_handler(num_links)
-    for r ∈ (1, 13), c = 1
+    for r ∈ (2, 14), c = 1
         add_child(arch, input_handler, CartesianIndex(r,c))
     end
-    for r ∈ (12, 18), c = 30
+    for r ∈ (13, 19), c = 30
         add_child(arch, input_handler, CartesianIndex(r,c))
     end
     ##################
     # Output Handler #
     ##################
     output_handler = build_output_handler(num_links)
-    for (r,c) ∈ zip((12,18,1,14), (1, 1, 30, 30))
+    for (r,c) ∈ zip((13,19,2,15), (1, 1, 30, 30))
         add_child(arch, output_handler, CartesianIndex(r,c))
     end
 

@@ -26,9 +26,9 @@ end
 
 @testset "Testing ASAP 4" begin
     # Build Architecture
-    arch = AsapMapper.asap4(2, AsapMapper.KCStandard)
+    arch = AsapMapper.asap4(3, AsapMapper.KCStandard)
     # Create Taskgraph Constructor
-    sdc = AsapMapper.CachedSimDump("alexnet")
+    sdc = AsapMapper.PMConstructor("mapper_in.json")
     taskgraph = AsapMapper.build_taskgraph(sdc)
     taskgraph = AsapMapper.apply_transforms(taskgraph, sdc)
 
@@ -42,9 +42,9 @@ end
 
 @testset "Testing ASAP 3" begin
     # Build Architecture
-    arch = AsapMapper.asap3(2, AsapMapper.KCStandard)
+    arch = AsapMapper.asap3(3, AsapMapper.KCStandard)
     # Create Taskgraph Constructor
-    sdc = AsapMapper.CachedSimDump("fft")
+    sdc = AsapMapper.PMConstructor("mapper_in.json")
     taskgraph = AsapMapper.build_taskgraph(sdc)
     taskgraph = AsapMapper.apply_transforms(taskgraph, sdc)
 

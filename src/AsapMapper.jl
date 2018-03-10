@@ -2,9 +2,13 @@ module AsapMapper
 
 const USEPLOTS = false
 
+const is07 = VERSION > v"0.7.0-"
+
 using Mapper2
 using IterTools, JSON, GZip
-using MicroLogging
+is07 ? (using Logging) : (using MicroLogging)
+using Missings
+using Compat
 #using JLD2, FileIO
 
 # Set up directory paths
@@ -49,12 +53,9 @@ const push_to_dict = Mapper2.Helper.push_to_dict
 # the architecture.
 ################################################################################
 
-const _kilocore_attributes = Set([
+const _mapper_task_classes = Set([
       "processor",
       "memory_processor",
-      "fast_processor",
-      "viterbi",
-      "fft",
       "input_handler",
       "output_handler",
       "memory_1port",
@@ -63,15 +64,11 @@ const _kilocore_attributes = Set([
 
 const _special_attributes = Set([
       "memory_processor",
-      "fast_processor",
-      "viterbi",
-      "fft",
       "input_handler",
       "output_handler",
       "memory_1port",
       "memory_2port",
     ])
-
 
 ################################################################################
 # Custom Architecture used by this Framework
@@ -80,10 +77,9 @@ const _special_attributes = Set([
 abstract type AbstractKC <: AbstractArchitecture end
 
 struct KCNoWeight <: AbstractKC end
-struct KCStandard  <: AbstractKC end
+struct KCStandard <: AbstractKC end
 
-# Database
-include("Database.jl")
+include("Helper.jl")
 
 # Architectures
 include("models/models.jl")
@@ -94,6 +90,9 @@ include("Overloads.jl")
 
 include("Placement.jl")
 include("Routing.jl")
+
+# For communication with the project manager
+include("Dump.jl")
 
 include("experiments/Experiments.jl")
 
@@ -108,11 +107,12 @@ function testmap()
 
     #arch = asap4(2, KCStandard)
     #arch = asap3_hex(2, KCStandard)
-    #arch = asap3(3, KCStandard)
-    arch = generic(16,16,4,12, KCStandard)
+    arch = asap3(2, KCStandard)
+    #arch = generic(16,16,4,12, KCStandard)
 
-    tg = load_taskgraph("sort")
-    return NewMap(arch, tg)
+    t = build_taskgraph(PMConstructor("mapper_in.json"))
+    #tg = load_taskgraph("alexnet")
+    return NewMap(arch, t)
 end
 
 ################################################################################
@@ -121,14 +121,15 @@ end
 
 function place_and_route(architecture, profile_path, dump_path)
     # Initialize an uncompressed taskgraph constructor
-    tc = SimDumpConstructor{false}("blank", profile_path)
-    t = build_taskgraph(tc)
+    c = PMConstructor(profile_path)
+    #tc = SimDump{false}("blank", profile_path)
+    t = build_taskgraph(c)
 
     # Dispatch architecture
     if architecture == "asap4"
         a = asap4(2, KCStandard)
     elseif architecture == "asap3"
-        a = asap3(2, KCNoWeight)
+        a = asap3(2, KCStandard)
     else
         KeyError("Architecture $architecture not implemented.")
     end
@@ -140,8 +141,7 @@ function place_and_route(architecture, profile_path, dump_path)
     # Run Routing
     m = route(m)
     # Dump mapping to given dump path
-    Mapper2.save(m, dump_path, false)
+    dump_map(m, dump_path)
 end
-
 
 end # module
