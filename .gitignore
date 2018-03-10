@@ -8,3 +8,4 @@ backup/*
 *.swp
 *.png
 *.jld2
+scratchpad.jl
