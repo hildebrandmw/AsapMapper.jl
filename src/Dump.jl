@@ -17,8 +17,8 @@ create_dict(d::Dict, k, v) = haskey(d, k) || (d[k] = v())
 struct RoutingTuple
     class           ::String
     source_task     ::_name_types
-    source_inde     ::_index_types
-    dest_tas        ::_name_types
+    source_index    ::_index_types
+    dest_task       ::_name_types
     dest_index      ::_index_types
 end
 
@@ -102,12 +102,10 @@ function populate_routes!(jsn,m)
 end
 
 function extract_routings(m)
+    arch = m.architecture
     routings = Dict{RoutingTuple,Any}()
     for (edge, graph) in zip(m.taskgraph.edges, m.mapping.edges)
         # Pessimistic length check.
-        if length(getsources(edge)) != 1 || length(getsinks(edge)) != 1
-            error("Taskgraph has fanout nodes.")
-        end
 
         # Build the route tuple
         source_task = first(getsources(edge)) 
@@ -119,14 +117,15 @@ function extract_routings(m)
         dest_index   = edge.metadata["dest_index"]
 
         class = edge.metadata["class"]
-        key = RoutingTuple(class, source_task, source_index, dest_task, dest_index)
 
-        # Kind of gross method for getting the network id.
+        # Get network ID from port.
         src_port_path = first(Mapper2.Helper.source_vertices(graph))
-        network_id = get(m.architecture[src_port_path].metadata,"network_id",nothing)
+        port_metadata = arch[src_port_path].metadata
+        network_id = get(port_metadata,"network_id",nothing)
 
         index = edge.metadata["source_index"]
-        # Record route by routing tuple
+
+        key = RoutingTuple(class, source_task, source_index, dest_task, dest_index)
         routings[key] = MapDumpRoute(
             network_id,
             source_task,
