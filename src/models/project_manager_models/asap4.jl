@@ -56,17 +56,14 @@ function asap4(num_links, A)
     # Input Handler #
     #################
     input_handler = build_input_handler(num_links)
-    for r ∈ (2, 14), c = 1
-        add_child(arch, input_handler, CartesianIndex(r,c))
-    end
-    for r ∈ (13, 19), c = 30
+    for (r,c) ∈ zip((2,13,15,19), (1, 30, 1, 30))
         add_child(arch, input_handler, CartesianIndex(r,c))
     end
     ##################
     # Output Handler #
     ##################
     output_handler = build_output_handler(num_links)
-    for (r,c) ∈ zip((13,19,2,15), (1, 1, 30, 30))
+    for (r,c) ∈ zip((2,13,15,19), (30, 1, 30, 1))
         add_child(arch, output_handler, CartesianIndex(r,c))
     end
 
