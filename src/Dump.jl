@@ -59,8 +59,7 @@ function skeleton_dump(m::Map)
         addr = Mapper2.MapperCore.getaddress(address_path)
         addr = addr - CartesianIndex(2,2)
 
-        dumpnode = MapDumpNode(name, addr)
-        dict[name] = MapDumpNode(dumpnode)
+        dict[name] = MapDumpNode(name, addr)
     end
     return dict
 end

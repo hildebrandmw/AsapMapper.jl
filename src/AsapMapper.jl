@@ -53,22 +53,6 @@ const push_to_dict = Mapper2.Helper.push_to_dict
 # the architecture.
 ################################################################################
 
-const _mapper_task_classes = Set([
-      "processor",
-      "memory_processor",
-      "input_handler",
-      "output_handler",
-      "memory_1port",
-      "memory_2port",
-    ])
-
-const _special_attributes = Set([
-      "memory_processor",
-      "input_handler",
-      "output_handler",
-      "memory_1port",
-      "memory_2port",
-    ])
 
 ################################################################################
 # Custom Architecture used by this Framework
@@ -82,7 +66,8 @@ struct KCStandard <: AbstractKC end
 include("Helper.jl")
 
 # Architectures
-include("models/models.jl")
+include("project_manager_models/cad_models.jl")
+#include("models/models.jl")
 
 # Include files
 include("Taskgraph.jl")
