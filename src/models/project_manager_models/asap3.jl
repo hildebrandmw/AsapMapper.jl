@@ -57,13 +57,13 @@ function asap3(num_links,A)
 	#################
 	# Input Handler #
 	#################
-	input_handler = build_input_handler(num_links)
+	input_handler = build_input_handler(1)
     add_child(arch, input_handler, CartesianIndex(2,1))
 
 	##################
 	# Output Handler #
 	##################
-	output_handler = build_output_handler(num_links)
+	output_handler = build_output_handler(1)
     add_child(arch, output_handler, CartesianIndex(2,34))
 
 	connect_processors(arch,num_links)

@@ -32,18 +32,16 @@ end
 MapDumpNode(name, addr::Tuple) = MapDumpNode(name, addr, Dict{String,Any}())
 MapDumpNode(name, addr::CartesianIndex) = MapDumpNode(name, addr.I, Dict{String,Any}())
 
-
 struct MapDumpRoute <: MapDump
-    network_id      ::Any
-    source_task     ::Any
-    source_index    ::Any
-    dest_task       ::Any
-    dest_index      ::Any
+    network_id      ::Union{Int,Void}
+    source_task     ::_name_types
+    source_index    ::_index_types
+    dest_task       ::_name_types
+    dest_index      ::_index_types
     offset_list     ::Vector
 end
 
 JSON.lower(m::MapDump) = Dict(string(f) => getfield(m,f) for f in fieldnames(typeof(m)))
-JSON.lower(::Missing) = "missing"
 
 """
     skeleton_dump(m::Map)
@@ -128,7 +126,7 @@ function extract_routings(m)
         network_id = get(m.architecture[src_port_path].metadata,"network_id",nothing)
 
         index = edge.metadata["source_index"]
-        # Save result
+        # Record route by routing tuple
         routings[key] = MapDumpRoute(
             network_id,
             source_task,
