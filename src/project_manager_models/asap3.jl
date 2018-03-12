@@ -1,5 +1,4 @@
-function asap3(num_links,A)
-    make_copies = false
+function asap3(num_links,A,make_copies)
     arch = TopLevel{A,2}("asap3")
 
     ####################
@@ -27,7 +26,7 @@ function asap3(num_links,A)
 	# Memory Processor #
 	####################
 
-	memory_processor = build_memory_processor_tile(num_links)
+	memory_processor = build_processor_tile(num_links, include_memory = true)
 	for r = 32, c = 2:13
         if make_copies
             add_child(arch, deepcopy(memory_processor), CartesianIndex(r,c))
@@ -46,7 +45,7 @@ function asap3(num_links,A)
 	#################
 	# 2 Port Memory #
 	#################
-	memory_2port = build_memory_2port()
+    memory_2port = build_memory(2)
 	for r = 33, c in (2:2:12)
         add_child(arch, memory_2port, CartesianIndex(r,c))
 	end

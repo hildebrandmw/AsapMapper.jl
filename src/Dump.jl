@@ -26,14 +26,26 @@ abstract type MapDump end
 struct MapDumpNode <: MapDump
     name            ::String
     address         ::Tuple
+    core_name       ::Union{String,Void}
+    core_type       ::Union{String,Void}
     leaf_node_dict  ::Dict{String,Any}
 end
 
-MapDumpNode(name, addr::Tuple) = MapDumpNode(name, addr, Dict{String,Any}())
-MapDumpNode(name, addr::CartesianIndex) = MapDumpNode(name, addr.I, Dict{String,Any}())
+# Constructor supplying empty endiding dictionary
+function MapDumpNode(name, address::T, core_name, core_type) where T
+    return MapDumpNode(
+        name,
+        T <: CartesianIndex ? address.I : address,
+        core_name,
+        core_type,
+        Dict{String,Any}()
+    )
+end
 
 struct MapDumpRoute <: MapDump
     network_id      ::Union{Int,Void}
+    new_source_index::_index_types
+    new_dest_index  ::_index_types
     source_task     ::_name_types
     source_index    ::_index_types
     dest_task       ::_name_types
@@ -54,13 +66,15 @@ function skeleton_dump(m::Map)
     # Iterate through the dictionary in the mapping nodes
     for (name, address_path) in m.mapping.nodes
         node = getnode(m.taskgraph, name)
-        get(node.metadata, "nodump", false) && continue
         
         addr = Mapper2.MapperCore.getaddress(address_path)
         addr = addr - CartesianIndex(2,2)
 
-        dumpnode = MapDumpNode(name, addr)
-        dict[name] = MapDumpNode(dumpnode)
+        component = m.architecture[address_path]
+        core_name = component.metadata["pm_name"]
+        core_type = component.metadata["pm_type"]
+
+        dict[name] = MapDumpNode(name, addr, core_name, core_type)
     end
     return dict
 end
@@ -105,29 +119,37 @@ function extract_routings(m)
     arch = m.architecture
     routings = Dict{RoutingTuple,Any}()
     for (edge, graph) in zip(m.taskgraph.edges, m.mapping.edges)
-        # Pessimistic length check.
-
         # Build the route tuple
         source_task = first(getsources(edge)) 
         dest_task   = first(getsinks(edge))
-        # Quick sanity check
         offset_list = make_offset_list(graph)
 
         source_index = edge.metadata["source_index"]
         dest_index   = edge.metadata["dest_index"]
 
-        class = edge.metadata["class"]
+        class = edge.metadata["pm_class"]
 
-        # Get network ID from port.
-        src_port_path = first(Mapper2.Helper.source_vertices(graph))
-        port_metadata = arch[src_port_path].metadata
-        network_id = get(port_metadata,"network_id",nothing)
+        # Get source and destination ports to extract;
+        # - network_id
+        # - new_source_index
+        # - new_dest_index
+        src_port_path = first(source_vertices(graph))
+        dst_port_path = first(sink_vertices(graph))
+
+        src_metadata = arch[src_port_path].metadata
+        network_id = get(src_metadata,"network_id",nothing)
+        new_source_index = src_metadata["index"]
+
+        dst_metadata = arch[dst_port_path].metadata
+        new_dest_index = dst_metadata["index"]
 
         index = edge.metadata["source_index"]
 
         key = RoutingTuple(class, source_task, source_index, dest_task, dest_index)
         routings[key] = MapDumpRoute(
             network_id,
+            new_source_index,
+            new_dest_index,
             source_task,
             source_index,
             dest_task,
