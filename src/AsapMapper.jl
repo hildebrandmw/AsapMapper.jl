@@ -52,7 +52,7 @@ const push_to_dict = Mapper2.Helper.push_to_dict
 # Attributes to determine what tasks may be mapped to which components in
 # the architecture.
 ################################################################################
-
+abstract type MapConstructor end
 
 ################################################################################
 # Custom Architecture used by this Framework
@@ -70,15 +70,15 @@ include("project_manager_models/cad_models.jl")
 #include("models/models.jl")
 
 # Include files
-include("Taskgraph.jl")
-include("Overloads.jl")
-
-include("Placement.jl")
-include("Routing.jl")
+include("PMConstructor.jl")
+include("Mapper2_Interface.jl")
 
 # For communication with the project manager
 include("Dump.jl")
 
+# Customize placement/routing plus architectures.
+include("Placement.jl")
+include("Routing.jl")
 include("experiments/Experiments.jl")
 
 #include("Plots.jl")
@@ -106,21 +106,8 @@ end
 
 function place_and_route(architecture, profile_path, dump_path)
     # Initialize an uncompressed taskgraph constructor
-    c = PMConstructor(profile_path)
-    #tc = SimDump{false}("blank", profile_path)
-    t = build_taskgraph(c)
-
-    # Dispatch architecture
-    if architecture == "asap4"
-        a = asap4(2, KCStandard)
-    elseif architecture == "asap3"
-        a = asap3(2, KCStandard)
-    else
-        KeyError("Architecture $architecture not implemented.")
-    end
-
-    # Build the Map
-    m = NewMap(a, t)
+    c = PMConstructor(architecture, profile_path)
+    m = build_map(c)
     # Run placement
     m = place(m)
     # Run Routing

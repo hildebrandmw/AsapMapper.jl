@@ -66,7 +66,7 @@ end
 const _mapper_link_classes = Set([
         "circuit_link",
         "memory_request_link",
-        "memory_return_link",
+        "memory_response_link",
     ])
 
 # Generic function for making a metadata dictionary for ports/links where only
@@ -82,11 +82,12 @@ function routing_metadata(link_class)
 end
 
 # Processor component metadata.
-function proc_output_metadata(nports)
-    metadata_vec = map(1:nports) do i
+function proc_output_metadata(ndirs, nlayers)
+    metadata_vec = map(1:(ndirs * nlayers)) do i
         return Dict{String,Any}(
-            "link_class" => "circuit_link",
-            "index" => i-1,
+            "link_class"    => "circuit_link",
+            "index"         => i-1,
+            "network_id"    => div(i-1, ndirs),
         )
     end
     return metadata_vec
@@ -111,7 +112,7 @@ end
 
 function proc_memory_return_metadata()
     return Dict{String,Any}(
-        "link_class" => "memory_return_link",
+        "link_class" => "memory_response_link",
         "index" => 0
     )
 end
@@ -130,7 +131,7 @@ end
 function mem_memory_return_metadata(nports)
     metadata_vec = map(1:nports) do i
         return Dict{String,Any}(
-            "link_class" => "memory_return_link",
+            "link_class" => "memory_response_link",
             "index" => i-1,
         )
     end

@@ -1,11 +1,13 @@
 ################################################################################
 # COMPLEX BLOCKS
 ################################################################################
-function build_processor_tile(num_links; 
-                              include_memory = false,
-                              name = include_memory ? "memory_processor_tile" : "processor_tile", 
-                              directions = ("east", "north", "west", "south"),
-                             )
+function build_processor_tile(
+              num_links; 
+              asap = true,
+              include_memory = false,
+              name = include_memory ? "memory_processor_tile" : "processor_tile", 
+              directions = ("east", "north", "west", "south"),
+             )
 
     num_fifos = 2
     # No need to assign metadata to this component.
@@ -21,15 +23,21 @@ function build_processor_tile(num_links;
             add_port(comp, port_name, class, num_links, metadata = cl_metadata)
         end
     end
-    # Instantiate the processor primitive
-    proc_component = build_processor(num_links, include_memory = include_memory)
+
+    # Instantiate the processor primitive - do special assignment for ASAP mapping.
+    if asap == true
+        proc_component = build_asap_processor(include_memory = include_memory)
+    else
+        proc_component = build_processor(num_links, include_memory = include_memory)
+    end
+
     add_child(comp, proc_component, "processor")
 
     # Instantiate the directional routing muxes
     routing_mux = build_mux(length(directions),1)
     for dir in directions
         name = "$(dir)_mux"
-        add_child(comp, routing_mux, name, num_links, metadata = cl_metadata)
+        add_child(comp, routing_mux, name, num_links)
     end
     # Instantiate the muxes routing data to the fifos
     num_fifo_entries = length(directions) * num_links + 1
@@ -39,19 +47,19 @@ function build_processor_tile(num_links;
     # "memory_processor" attribute in the core to allow memory application
     # to be mapped to them.
     if include_memory
-        add_port(comp, "memory_in", "input", metadata = routing_metadata("memory_return_link"))
-        add_port(comp, "memory_out", "output", metadata = routing_metadata("memory_request_link"))
-        add_link(comp, "processor.memory_out", "memory_out", metadata = routing_metadata("memory_return_link"))
-        add_link(comp, "memory_in", "processor.memory_in", metadata = routing_metadata("memory_request_link"))
+        return_link = routing_metadata("memory_response_link")
+        request_link = routing_metadata("memory_request_link")
+        add_port(comp, "memory_in", "input", metadata = return_link)
+        add_port(comp, "memory_out", "output", metadata = request_link)
+        add_link(comp, "processor.memory_out", "memory_out", metadata = request_link)
+        add_link(comp, "memory_in", "processor.memory_in", metadata = return_link)
     end
-
-    # Interconnect - Don't attach metadata and let the routing routine fill in
-    # defaults to intra-tile routing.
 
     # Connect outputs of muxes to the tile outputs
     for dir in directions, i = 0:num_links-1
-        mux_port = "$(dir)_mux[$i].out[0]"
-        tile_port = "$(dir)_out[$i]"
+        # Each mux has only one output.
+        mux_port    = "$(dir)_mux[$i].out[0]"
+        tile_port   = "$(dir)_out[$i]"
         add_link(comp, mux_port, tile_port, metadata = cl_metadata)
     end
 
@@ -115,16 +123,51 @@ function build_processor_tile(num_links;
     return comp
 end
 
-# PRIMITIVE BLOCKS
-##############################
-#        PROCESSOR
-##############################
+################################################################################
+#                           processor
+################################################################################
+function build_asap_processor(;include_memory = false)
+    directions = ("east", "north", "west", "south", "east", "north", "south", "west")
+    # Build the metadata dictionary for the processor component
+    metadata = Dict{String,Any}()
 
-"""
-    build_processor(num_links)
+    if include_memory
+        comp_metadata = mem_proc_metadata()
+        name = "memory_processor"
+    else
+        comp_metadata = proc_metadata()
+        name = "standard_processor"
+    end
 
-Build a simple processor.
-"""
+    component = Component(name, metadata = comp_metadata)
+    # fifos
+    add_port(component, "fifo", "input", 2, metadata = proc_fifo_metadata(2))
+    # ports. Neet to play some indexing games for the metadata vector to get
+    # indices to line up with the Asap4 manual.
+    port_metadata = proc_output_metadata(4, 2)
+
+    # Traversal order - line up with port requirements from KiloCore.
+    nii = [("east",  0, 1),
+           ("north", 0, 2),
+           ("west",  0, 3),
+           ("south", 0, 4),
+           ("east",  1, 5),
+           ("north", 1, 6),
+           ("south", 1, 7),
+           ("west",  1, 8)]
+
+    for (str, i, port_index) in nii
+        add_port(component, "$str[$(i)]", "output", metadata = port_metadata[port_index])
+    end
+    # Add memory ports. Will only be connected in the memory processor tile.
+    if include_memory
+        add_port(component, "memory_in", "input", metadata = proc_memory_return_metadata())
+        add_port(component, "memory_out", "output", metadata = proc_memory_request_metadata())
+    end
+    # Return the created type
+    return component
+end
+
 function build_processor(num_links;
                          include_memory = false, 
                          num_fifos = 2,
@@ -146,10 +189,9 @@ function build_processor(num_links;
     add_port(component, "fifo", "input", num_fifos, metadata = proc_fifo_metadata(num_fifos))
     # ports. Neet to play some indexing games for the metadata vector to get
     # indices to line up with the Asap4 manual.
-    port_metadata = proc_output_metadata(num_links * length(directions))
-    for (i,str) in enumerate(directions)
-        index = (i-1)*length(directions) + 1
-        add_port(component, str, "output", num_links, metadata = port_metadata[index])
+    port_metadata = proc_output_metadata(length(directions), num_links)
+    for (port_index,(str,i)) in enumerate(Iterators.product(directions, 1:num_links))
+        add_port(component, "$str[$(i-1)]", "output", metadata = port_metadata[port_index])
     end
     # Add memory ports. Will only be connected in the memory processor tile.
     if include_memory
@@ -197,3 +239,130 @@ end
 @deprecate build_memory_1port() build_memory(1)
 @deprecate build_memory_2port() build_memory(2)
 @deprecate build_memory_processor_tile(num_links) build_processor_tile(num_links, include_memory = true)
+
+################################################################################
+# Functions for connecting processors, IO, and memories together
+################################################################################
+function connect_processors(tl, num_links)
+
+    vals = ["processor", "input_handler", "output_handler"]
+    fn = x -> search_metadata!(x, "attributes", vals, oneofin)
+    src_rule = fn
+    dst_rule = fn
+
+    # Build metadata dictionary for capacity and cost
+    metadata = Dict(
+        "cost"          => 1.0,
+        "capacity"      => 1,
+        "link_class"    => "circuit_link"
+    )
+
+    # Create offset rules.
+    offsets = [CartesianIndex(-1,0),
+               CartesianIndex(1,0),
+               CartesianIndex(0,1),
+               CartesianIndex(0,-1)]
+    #=
+    Create two tuples for the source ports and destination ports. In general,
+    if the source link is going out of the north port, the destionation will
+    be coming in the south port.
+    =#
+    src_dirs = ("north", "south", "east", "west")
+    dst_dirs = ("south", "north", "west", "east")
+
+    src_ports = [["$(src)_out[$i]" for i in 0:num_links-1] for src in src_dirs]
+    dst_ports = [["$(dst)_in[$i]" for i in 0:num_links-1] for dst in dst_dirs]
+
+    offset_rules = []
+    for (o,s,d) in zip(offsets, src_ports, dst_ports)
+        rules = [(o,i,j) for (i,j) in zip(s,d)]
+        append!(offset_rules, rules)
+    end
+
+    connection_rule(tl, offset_rules, src_rule, dst_rule, metadata = metadata)
+end
+
+function connect_io(tl, num_links)
+
+    vals = ["processor", "input_handler", "output_handler"]
+    fn = x -> search_metadata!(x, "attributes", vals, oneofin)
+    src_rule = fn
+    dst_rule = fn
+
+    src_dirs = ("east","west")
+    dst_dirs = ("west","east")
+    # Links can go both directions, so make the offsets an array
+    offsets = [CartesianIndex(0,1), CartesianIndex(0,-1)]
+
+    offset_rules = []
+    for offset in offsets
+        for (src,dst) in zip(src_dirs, dst_dirs)
+            src_ports = ["out[$i]" for i in 0:num_links-1]
+            append!(src_ports, ["$(src)_out[$i]" for i in 0:num_links-1])
+
+            dst_ports = ["$(dst)_in[$i]" for i in 0:num_links-1]
+            append!(dst_ports, ["in[$i]" for i in 0:num_links-1])
+            
+            new_rule = [(offset, s, d) for (s,d) in zip(src_ports, dst_ports)]
+            append!(offset_rules, new_rule)
+        end
+    end
+    # Build metadata dictionary for capacity and cost
+    metadata = Dict(
+        "cost"          => 1.0,
+        "capacity"      => 1,
+        "link_class"    => "link_class"
+    )
+
+    # Launch the function call!
+    connection_rule(tl, offset_rules, src_rule, dst_rule, metadata = metadata)
+    return nothing
+end
+
+function connect_memories(tl)
+    # Create metadata dictionary for the memory links.
+    request_metadata = Dict(
+        "cost"          => 1.0,
+        "capacity"      => 1,
+        "link_class"    => "memory_request_link",
+   )
+
+    return_metadata = Dict(
+        "cost"          => 1.0,
+        "capacity"      => 1,
+        "link_class"    => "memory_response_link",
+   )
+    ########################### 
+    # Connect 2 port memories #
+    ########################### 
+
+    proc_rule = x -> search_metadata!(x, "attributes", "memory_processor", in)
+    mem2_rule  = x -> search_metadata!(x, "attributes", "memory_2port", in)
+
+
+    offset_rules = [
+        (CartesianIndex(-1,0), "out[0]", "memory_in"),
+        (CartesianIndex(-1,1), "out[1]", "memory_in"),
+    ]
+    connection_rule(tl, offset_rules, mem2_rule, proc_rule, metadata = request_metadata)
+
+    offset_rules = [
+        (CartesianIndex(1,0), "memory_out", "in[0]"),
+        (CartesianIndex(1,-1), "memory_out", "in[1]")
+    ]
+
+    connection_rule(tl, offset_rules, proc_rule, mem2_rule, metadata = return_metadata)
+
+    ########################### 
+    # Connect 1 port memories #
+    ########################### 
+    mem1_rule = x -> search_metadata!(x, "attributes", "memory_1port", in)
+
+    offset_rule = [(CartesianIndex(-1,0), "out[0]", "memory_in")]
+    connection_rule(tl, offset_rule, mem1_rule, proc_rule, metadata = request_metadata)
+
+    offset_rule = [(CartesianIndex(1,0), "memory_out", "in[0]")]
+    connection_rule(tl, offset_rule, proc_rule, mem1_rule, metadata = return_metadata)
+
+    return nothing
+end

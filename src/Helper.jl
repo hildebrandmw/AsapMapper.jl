@@ -28,3 +28,28 @@ function Base.next(s::Splatter, state)
     return (splatify(ns), nextstate)
 end
 Base.done(s::Splatter, state) = done(s.iter, state)
+
+################################################################################
+
+type_sanitize(::Type{T}, v::T) where T = v
+function type_sanitize(::Type{T}, v::U) where {T,U}
+    throw(TypeError(:type_sanitize, "Unexpected type for link definitions",T,U))
+end
+
+"""
+    getkeys(d::T, keys, required = true) where T <: Dict
+
+Return a dictionary `r` of type `T` with just the requested keys and
+corresponding values from `d`. If `required = true`, throw `KeyError` if a key
+`k` is not found. Otherwise, set `r[k] = missing`.
+"""
+function getkeys(d::T, keys, required = true) where T <: Dict
+    r = T()
+    for k in keys
+        if required && !haskey(d, k)
+            throw(KeyError(k))
+        end
+        r[k] = get(d, k, missing)
+    end
+    return r
+end
