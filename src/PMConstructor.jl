@@ -168,8 +168,6 @@ function parse_input(t::Taskgraph, tasklist)
                     in(link_tuple, seen_tuples) && continue
                     push!(seen_tuples, link_tuple)
 
-                    preserve_dest = (link_class == "Circuit_Link")
-
                     # Merge in the metadata
                     basic_metadata = Dict{String,Any}(
                           "pm_class"        => link_class,

@@ -53,10 +53,7 @@ function Mapper2.is_sink_port(::Type{T}, p::Port, e::TE) where {T <: AKC}
     edge_link_class = e.metadata["link_class"]
 
     # Check if this is a circuit_link. If so, preserve the destination index.
-    if (    edge_link_class == "circuit_link" &&
-            get(p.metadata, "preserve_destination", true) &&
-            port_link_class == edge_link_class)
-
+    if (e.metadata["preserve_dest"] && port_link_class == edge_link_class)
         return e.metadata["dest_index"] == p.metadata["index"] 
     end
 
