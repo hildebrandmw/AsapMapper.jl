@@ -1,10 +1,10 @@
-function dump_map(m::Map, filename::String)
+function dump_map(m::Map, filename::AbstractString)
     jsn = skeleton_dump(m)
     populate_routes!(jsn, m)
 
-    json_dict = Dict("task_structure" => collect(values(jsn)))
+    json_dict = Dict{String,Any}("task_structure" => collect(values(jsn)))
 
-    #jsn = Dict(k => dictify(v) for (k,v) in predump)
+    record_info!(json_dict, m)
     f = open(filename, "w")
     print(f, json(json_dict, 2)) 
     close(f)
@@ -12,6 +12,16 @@ function dump_map(m::Map, filename::String)
 end
 
 create_dict(d::Dict, k, v) = haskey(d, k) || (d[k] = v())
+
+"""
+    record_info!(json_dict, m::Map)
+
+Record various info that may be helpful to the Project Manager.
+"""
+function record_info!(json_dict, m::Map)
+    create_dict(json_dict, "info", Dict{String,Any})
+    json_dict["info"]["routing_success"] = Mapper2.check_routing(m)
+end
 
 ################################################################################
 struct RoutingTuple

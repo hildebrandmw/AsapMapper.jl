@@ -1,7 +1,6 @@
 using AsapMapper
-using GZip
 using Base.Test
 
-include("Database.jl")
+include("database.jl")
 include("models.jl")
-include("sharedplacement.jl")
+#include("sharedplacement.jl")

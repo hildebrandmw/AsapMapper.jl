@@ -66,7 +66,7 @@ struct KCStandard <: AbstractKC end
 include("Helper.jl")
 
 # Architectures
-include("project_manager_models/cad_models.jl")
+include("cad_models/cad_models.jl")
 #include("models/models.jl")
 
 # Include files
@@ -82,7 +82,6 @@ include("Routing.jl")
 include("experiments/Experiments.jl")
 
 #include("Plots.jl")
-
 
 ################################################################################
 # Useful for testing and debugging

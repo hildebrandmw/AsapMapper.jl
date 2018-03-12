@@ -107,6 +107,7 @@ const _accepted_task_types = (
         "Memory",
        )
 
+build_taskgraph(c::MapConstructor) = build_taskgraph(c, parse(c))
 function build_taskgraph(c::MapConstructor, json_dict::Dict)
     t = Taskgraph()
     parse_input(t, json_dict["task_structure"])
