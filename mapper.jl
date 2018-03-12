@@ -2,36 +2,33 @@
 push!(LOAD_PATH, @__DIR__)
 push!(LOAD_PATH, joinpath(@__DIR__, ".."))
 
-using ArgParse
+#using ArgParse
 using AsapMapper
 using Mapper2
 
-function parse_commandline()
-    s = ArgParseSettings()
+function print_help()
+    print("""
+          usage: mapper.jl [-h] architecture input_file output_file
 
-    @add_arg_table s begin
-        "architecture"
-            help = "Name of the architecture to map to. Can be `asap3` or `asap4`."
-            arg_type = String
-            required = true
-        "input_file"
-            help = "Path to the input `profile.bin`."
-            arg_type = String
-            required = true
-        "output_file"
-            help = "Path and name of the desired output file."
-            arg_type = String
-            required = true
-    end
-    return parse_args(s)
+          positional arguments:
+            architecture:   The architecture to map to. Can be `asap3` or `asap4`.
+            input_file:     Path to the input JSON file.
+            output_file:    Path tot the output JSON file.
+          """)
 end
 
 function main()
-    parsed_args = parse_commandline()
+    #parse_commandline()
+    for arg in ARGS
+        if arg == "-h"
+            print_help()
+            return
+        end
+    end
 
-    architecture = parsed_args["architecture"]
-    input_file   = parsed_args["input_file"]
-    output_file  = parsed_args["output_file"]
+    architecture = ARGS[1]
+    input_file   = ARGS[2]
+    output_file  = ARGS[3]
 
     AsapMapper.place_and_route(architecture, input_file, output_file)
 end
