@@ -21,19 +21,10 @@ Make sure [Mapper2](https://github.com/hildebrandmw/Mapper2.jl) is installed
 as well.
 
 ## Running from Commandline
+To invoke the Mapper from the command line, just run the following:
 
-To run AsapMapper from the commandline. Copy and paste the script *"mapper.jl"*
-in the top level directory to the place where you wish to invoke the Mapper.
-
-Make sure the `ArgParse` package is installed by running
-```julia
-Pkg.add("ArgParse")
 ```
-
-Assuming Julia is registered on your system, you can invoke the mapper in the
-directory with `mapper.jl` using the command
-```
-julia mapper.jl architecture input_file output_file
+julia /path/to/mapper.jl architecture input_file output_file
 ```
 where
 * `architecture` is the name of the architecture to be mapped. Right now, it

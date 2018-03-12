@@ -4,8 +4,7 @@
 temp/*
 results/*
 backup/*
-*.pickle
 *.swp
 *.png
-*.jld2
+*.json
 scratchpad.jl
