@@ -1,6 +1,11 @@
 ################################################################################
 # COMPLEX BLOCKS
 ################################################################################
+"""
+    build_processor_tile(num_links, kwargs)
+
+Build a processor
+"""
 function build_processor_tile(
               num_links; 
               asap = true,

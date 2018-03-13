@@ -16,7 +16,8 @@ const SRCDIR = @__DIR__
 const PKGDIR = dirname(SRCDIR)
 const RESULTS = joinpath(PKGDIR, "results")
 
-export  testmap,
+export  place_and_route,
+        testmap,
         place,
         route,
         # Taskgraph constructors

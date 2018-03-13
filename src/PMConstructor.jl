@@ -74,16 +74,26 @@ function Base.parse(c::PMConstructor)
 end
 
 function build_map(c::PMConstructor)
-    # set "make_copies" argument to "true" - assignign proc-specific metadata
-    if c.arch == "asap4"
+    # Parse the input json file
+    json_dict = parse(c)     
+    # get the options dict - check for architecture.
+    options = json_dict["mapper_options"]
+    if haskey(options, "architecture")
+        arch = options["architecture"]
+        @info "Using architecture $arch from the options dictionary."
+    else
+        arch = c.arch
+    end
+
+    # decode architecture. Make copies of internal components to allow component
+    # specific naming.
+    if arch == "asap4"
         a = asap4(2, KCStandard, true)
-    elseif c.arch == "asap3"
+    elseif arch == "asap3"
         a = asap3(2, KCStandard, true)
     else
         KeyError("Architecture $architecture not implemented.")
     end
-    # Parse the input json file
-    json_dict = parse(c)     
     # Build taskgraph
     t = build_taskgraph(c, json_dict)
     # Run operations on the architecture according.
