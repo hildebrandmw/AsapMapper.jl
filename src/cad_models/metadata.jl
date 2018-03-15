@@ -159,6 +159,79 @@ function output_handler_port_metadata(nlinks)
 end
 
 ################################################################################
+# Metadata for top level ports - used for pretty post-route plotting.
+
+function top_level_port_metadata(orientation, direction, class, num_links)
+    # Get a base dictionary for this port class.
+    base = routing_metadata(class)
+    # Parameters controlling offset generation.
+    x_spacing = 0.4/num_links
+    y_spacing = 0.4/num_links
+
+    if orientation in ("east", "west")
+        if direction == "input" 
+            if orientation == "east"
+                x_offset = 1.0
+                y_offset = 0.05
+            else
+                x_offset = 0.0
+                y_offset = 0.55
+            end
+        else
+            if orientation == "east"
+                x_offset = 1.0
+                y_offset = 0.55
+            else
+                x_offset = 0.0
+                y_offset = 0.05
+            end
+        end
+        # Dictionary creation
+        offset_dicts = map(0:num_links-1) do i
+            # Make a dict with some offset values
+            d = Dict(
+                "x" => x_offset,
+                "y" => y_offset + i*y_spacing
+               ) 
+            # merge with the base metadata dictionary
+            return merge(d, base)
+        end
+    elseif orientation in ("north", "south")
+        if direction == "input" 
+            if orientation == "north"
+                x_offset = 0.05
+                y_offset = 0.0
+            else
+                x_offset = 0.55
+                y_offset = 1.0
+            end
+        else
+            if orientation == "north"
+                x_offset = 0.55
+                y_offset = 0.0
+            else
+                x_offset = 0.05
+                y_offset = 1.0
+            end
+        end
+        # Dictionary creation
+        offset_dicts = map(0:num_links-1) do i
+            # Make a dict with some offset values
+            d = Dict(
+                "x" => x_offset + i*x_spacing,
+                "y" => y_offset,
+               ) 
+            # merge with the base metadata dictionary
+            return merge(d, base)
+        end
+    else
+        offset_dicts = [base for i in 1:num_links]
+    end
+    return offset_dicts
+end
+
+
+################################################################################
 # Miscellaneous data
 ################################################################################
 

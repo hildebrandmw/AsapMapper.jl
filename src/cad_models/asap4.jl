@@ -1,4 +1,4 @@
-function asap4(num_links, A,make_copies)
+function asap4(num_links, A)
     arch = TopLevel{A,2}("asap4")
 
     # Extra parameters
@@ -9,18 +9,10 @@ function asap4(num_links, A,make_copies)
     ####################
     processor = build_processor_tile(num_links)
     for r in 2:25, c in 2:28
-        if make_copies
-            add_child(arch, deepcopy(processor), CartesianIndex(r,c))
-        else
-            add_child(arch, processor, CartesianIndex(r,c))
-        end
+        add_child(arch, processor, CartesianIndex(r,c))
     end
     for r in 2:21, c in 29
-        if make_copies
-            add_child(arch, deepcopy(processor), CartesianIndex(r,c))
-        else
-            add_child(arch, processor, CartesianIndex(r,c))
-        end
+        add_child(arch, processor, CartesianIndex(r,c))
     end
 
     ####################
@@ -28,11 +20,7 @@ function asap4(num_links, A,make_copies)
     ####################
     memory_processor = build_processor_tile(num_links, include_memory = true)
     for r = 26, c = 2:28
-        if make_copies
-            add_child(arch, deepcopy(memory_processor), CartesianIndex(r,c))
-        else
-            add_child(arch, memory_processor, CartesianIndex(r,c))
-        end
+        add_child(arch, memory_processor, CartesianIndex(r,c))
     end
 
     #################

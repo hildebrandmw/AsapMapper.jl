@@ -68,6 +68,7 @@ include("Helper.jl")
 
 # Architectures
 include("cad_models/cad_models.jl")
+include("experimental_models/experimental_models.jl")
 #include("models/models.jl")
 
 # Include files

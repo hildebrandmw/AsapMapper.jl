@@ -43,8 +43,10 @@ function plot_route(m, spacing = 20, tilesize = 20)
             x_offset = address[2]*(spacing+tilesize)
             y_offset = address[1]*(spacing+tilesize) # apply spacing and tilesize offsets
             if isglobalport(port)
-                x_offset += a[port].metadata["x"]*tilesize # apply metadata offsets
-                y_offset += a[port].metadata["y"]*tilesize
+                # Get the offsets. Default to 0.5 if metadata is not found
+                # to avoid errors.
+                x_offset += get(a[port].metadata, "x", 0.5)*tilesize # apply metadata offsets
+                y_offset += get(a[port].metadata, "y", 0.5)*tilesize
                 push!(x, x_offset) # push into local edge array
                 push!(y, y_offset)
                 count += 1

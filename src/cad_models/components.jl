@@ -23,8 +23,9 @@ function build_processor_tile(
     # Add the circuit switched ports
     for dir in directions
         for (suffix,class)  in zip(("_in", "_out"), ("input", "output"))
+            meta = top_level_port_metadata(dir, class, "circuit_link", num_links)
             port_name = join((dir, suffix))
-            add_port(comp, port_name, class, num_links, metadata = cl_metadata)
+            add_port(comp, port_name, class, num_links, metadata = meta)
         end
     end
 

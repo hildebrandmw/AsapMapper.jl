@@ -11,7 +11,6 @@ Specifically:
         for this new type of link.
 
     - Custom routing channel with a cost field.
-
 =#
 
 ################################################################################
@@ -56,7 +55,6 @@ function Mapper2.is_sink_port(::Type{T}, p::Port, e::TE) where {T <: AKC}
     if (e.metadata["preserve_dest"] && port_link_class == edge_link_class)
         return e.metadata["dest_index"] == p.metadata["index"] 
     end
-
 
     return port_link_class == edge_link_class
 end

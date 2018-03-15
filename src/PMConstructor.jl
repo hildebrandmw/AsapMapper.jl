@@ -88,9 +88,9 @@ function build_map(c::PMConstructor)
     # decode architecture. Make copies of internal components to allow component
     # specific naming.
     if arch == "asap4"
-        a = asap4(2, KCStandard, true)
+        a = asap4(2, KCStandard)
     elseif arch == "asap3"
-        a = asap3(2, KCStandard, true)
+        a = asap3(2, KCStandard)
     else
         KeyError("Architecture $architecture not implemented.")
     end
@@ -316,13 +316,21 @@ function name_mappables(a::TopLevel, json_dict)
         addr = CartesianIndex(core["address"]...) + CartesianIndex(2,2)
         base_type = core["base_type"]
         found_match = false
+
+        # Spit out a warning is the address is not in the model.
         if !haskey(a.children, addr)
             @warn "No address $addr found for core $(core["name"])."
             continue
         end
+
         parent = a.children[addr]
         for path in walk_children(parent)
             component = parent[path]
+            # Try to match the base_type of the Project_Manager core with
+            # its type in the Mapper's model.
+            #
+            # This will break if multiple cores of the same type exist in the
+            # same tile.
             if ismatch(component, base_type)
                 # Set the metadata for this component and exit
                 component.metadata["pm_name"] = core["name"]

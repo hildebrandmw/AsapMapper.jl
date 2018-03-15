@@ -1,90 +1,121 @@
+struct MemoryLocation{D}
+    address         ::Address{D}
+    other_addresses ::Vector{Address{D}}
+    offsets         ::Vector{Address{D}}
+end
+
+function MemoryLocation(a::T, b::Vector{T}, c::Vector{T}) where T <: NTuple{D,<:Integer} where D
+    return MemoryLocation{D}(Address(a), Address.(b), Address.(c))
+end
+
+function MemoryLocation(a::T, b::T, c::Vector{T}) where T <: NTuple{D,<:Integer} where D
+    return MemoryLocation{D}(Address(a), [Address(b)], Address.(c))
+end
+
+function MemoryLocation(a::T, c::Vector{T}) where T <: NTuple{D,<:Integer} where D
+    return MemoryLocation{D}(Address(a), Address{D}[], Address.(c))
+end
+
+function mem_addresses(v::Vector{MemoryLocation{D}}) where D
+    a = Set{Address{D}}()
+    for i in v
+        push!(a, i.address)
+        for j in i.other_addresses
+            push!(a, j)
+        end
+    end
+    return a
+end
+
+function mem_neighbors(v::Vector{MemoryLocation{D}}) where D
+    a = Set{Address{D}}()
+    for i in v
+        base = i.address
+        for o in i.offsets
+            push!(a, base + o)
+        end
+    end
+    return a
+end
+
+
 function asap_cluster(num_links, A)
-    multiple_copies = true
     arch = TopLevel{A,2}("asap_cluster")
 
     # Extra parameters
     num_fifos = 2
-    mem_dict = Dict([(9, 8), (9, 9)]        => [(10, 8), (10, 9)],
-                    [(25, 26), (25, 27)]    => [(26, 26), (26, 27)],
-                    [(24, 10), (24, 11)]    => [(23, 10), (23, 11)],
-                    [(8, 26), (8, 27)]      => [(7, 26), (7, 27)],
-                    [(24, 8), (24, 9)]      => [(23, 8), (23, 9)],
-                    [(25, 8), (25, 9)]      => [(26, 8), (26, 9)],
-                    [(9, 26), (9, 27)]      => [(10, 26), (10, 27)],
-                    [(9, 24), (9, 25)]      => [(10, 24), (10, 25)],
-                    [(9, 10), (9, 11)]      => [(10, 10), (10, 11)],
-                    [(8, 10), (8, 11)]      => [(7, 10), (7, 11)],
-                    [(8, 24), (8, 25)]      => [(7, 24), (7, 25)],
-                    [(24, 24), (24, 25)]    => [(23, 24), (23, 25)],
-                    [(25, 24), (25, 25)]    => [(26, 24), (26, 25)],
-                    [(24, 26), (24, 27)]    => [(23, 26), (23, 27)],
-                    [(25, 10), (25, 11)]    => [(26, 10), (26, 11)],
-                    [(8, 8), (8, 9)]        => [(7, 8), (7, 9)])
+    memories = [
+                # Memory Cluster 1
+                MemoryLocation((8, 8),   (8, 9)  , [(-1,0),(-1,1)]),
+                MemoryLocation((8, 10),  (8, 11) , [(-1,0),(-1,1)]),
+                MemoryLocation((9, 8),   (9, 9)  , [(1,0),(1,1)]),
+                MemoryLocation((9, 10),  (9, 11) , [(1,0),(1,1)]),
+                # Memory Cluster 2
+                MemoryLocation((8, 24),  (8, 25) , [(-1,0),(-1,1)]),
+                MemoryLocation((8, 26),  (8, 27) , [(-1,0),(-1,1)]),
+                MemoryLocation((9, 24),  (9, 25) , [(1,0),(1,1)]),
+                MemoryLocation((9, 26),  (9, 27) , [(1,0),(1,1)]),
+                # Memory Cluster 3
+                MemoryLocation((24, 8),  (24, 9) , [(-1,0),(-1,1)]),
+                MemoryLocation((24, 10), (24, 11), [(-1,0),(-1,1)]),
+                MemoryLocation((25, 8),  (25, 9) , [(1,0),(1,1)]),
+                MemoryLocation((25, 10), (25, 11), [(1,0),(1,1)]),
+                # Memory Cluster 4
+                MemoryLocation((24, 24), (24, 25), [(-1,0),(-1,1)]),
+                MemoryLocation((24, 26), (24, 27), [(-1,0),(-1,1)]),
+                MemoryLocation((25, 24), (25, 25), [(1,0),(1,1)]),
+                MemoryLocation((25, 26), (25, 27), [(1,0),(1,1)]),
+        ]
 
-    mem_addrs = Array{Tuple{Int64,Int64},1}()
-    mem_neighbor_addrs = Array{Tuple{Int64,Int64},1}()
-    for (keys,values) in mem_dict
-        for key in keys
-            push!(mem_addrs,key)
-        end
-        for value in values
-            push!(mem_neighbor_addrs,value)
-        end
-    end
+
+
+    mem_addrs = mem_addresses(memories)
+    mem_neighbor_addrs = mem_neighbors(memories)
 
     ####################
     # Normal Processor #
     ####################
     processor = build_processor_tile(num_links)
-    for r in 1:32, c in 2:33
-        in((r,c),mem_addrs) && continue
-        in((r,c),mem_neighbor_addrs) && continue
-        if multiple_copies
-            add_child(arch, deepcopy(processor), CartesianIndex(r,c))
-        else
-            add_child(arch, processor, CartesianIndex(r,c))
+    for r in 2:33, c in 2:33
+        addr = Address(r,c)
+        # Skip if this is an address occupied by a memory or memory neighbor.
+        if in(addr, mem_addrs) || in(addr, mem_neighbor_addrs)
+            continue
         end
+        add_child(arch, processor, addr)
     end
 
     ####################
     # Memory Processor #
     ####################
-    memory_processor = build_memory_processor_tile(num_links)
+    # Instantiate a memory processor at every address neighboring a memory.
+    memory_processor = build_processor_tile(num_links, include_memory = true)
     for mem_neighbor_addr in mem_neighbor_addrs
-        if multiple_copies
-            add_child(arch, deepcopy(memory_processor),
-                    CartesianIndex(mem_neighbor_addr[1],mem_neighbor_addr[2]))
-        else
-            add_child(arch, memory_processor,
-                    CartesianIndex(mem_neighbor_addr[1],mem_neighbor_addr[2]))
-        end
+        add_child(arch, memory_processor, mem_neighbor_addr)
     end
 
     #################
-    # 1 Port Memory #
+    # 2 Port Memory #
     #################
-    memory_1port = build_memory_1port()
+    memory = build_memory(2)
     for mem_addr in mem_addrs
-        add_child(arch, memory_1port, CartesianIndex(mem_addr[1],mem_addr[2]))
+        add_child(arch, memory, mem_addr)
     end
 
     #################
     # Input Handler #
     #################
-    input_handler = build_input_handler(num_links)
-    for r ∈ (1, 13), c = 1
-        add_child(arch, input_handler, CartesianIndex(r,c))
-    end
-    for r ∈ (12, 18), c = 34
-        add_child(arch, input_handler, CartesianIndex(r,c))
+    input_handler = build_input_handler(1)
+    for (r,c) ∈ zip((2,13,15,19), (1, 34, 1, 34))
+        add_child(arch, input_handler, Address(r,c))
     end
 
     ##################
     # Output Handler #
     ##################
-    output_handler = build_output_handler(num_links)
-    for (r,c) ∈ zip((12,18,1,14), (1, 1, 34, 34))
-        add_child(arch, output_handler, CartesianIndex(r,c))
+    output_handler = build_output_handler(1)
+    for (r,c) ∈ zip((2,13,15,19), (34, 1, 34, 1))
+        add_child(arch, output_handler, Address(r,c))
     end
 
     #######################
@@ -92,31 +123,46 @@ function asap_cluster(num_links, A)
     #######################
     connect_processors(arch, num_links)
     connect_io(arch, num_links)
-    connect_memories_cluster(arch)
+    connect_memories_cluster(arch, memories)
     return arch
 end
 
-function connect_memories_cluster(tl)
+function connect_memories_cluster(arch, memories)
     # Create metadata dictionary for the memory links.
-    metadata = Dict(
-        "cost"      => 1.0,
-        "capacity"  => 1,
-        "network"   => ["memory"],
+    request_metadata = Dict(
+        "cost"          => 1.0,
+        "capacity"      => 1,
+        "link_class"    => "memory_request_link",
+   )
+
+    response_metadata = Dict(
+        "cost"          => 1.0,
+        "capacity"      => 1,
+        "link_class"    => "memory_response_link",
    )
 
     ###########################
     # Connect 1 port memories #
     ###########################
     proc_rule = x -> search_metadata!(x, "attributes", "memory_processor", in)
-    mem1_rule = x -> search_metadata!(x, "attributes", "memory_1port", in)
+    mem_rule = x -> search_metadata!(x, "attributes", "memory_2port", in)
 
-    offset_rule = [(CartesianIndex(-1,0), "out[0]", "memory_in"),
-                   (CartesianIndex(1,0), "out[0]", "memory_in")]
-    connection_rule(tl, offset_rule, mem1_rule, proc_rule, metadata = metadata)
+    for mem in memories
+        address = mem.address
+        for (i, offset) in enumerate(mem.offsets)
+            # Build Request Link.    
+            offset_rule = [(-offset, "memory_out", "in[$(i-1)]")]
+            connection_rule(arch, offset_rule, proc_rule, mem_rule,
+                            metadata = request_metadata, 
+                            valid_addresses = (address + offset,))
 
-    offset_rule = [(CartesianIndex(1,0), "memory_out", "in[0]"),
-                   (CartesianIndex(-1,0), "memory_out", "in[0]")]
-    connection_rule(tl, offset_rule, proc_rule, mem1_rule, metadata = metadata)
+            # Build response link.
+            offset_rule = [(offset, "out[$(i-1)]", "memory_in")]
+            connection_rule(arch, offset_rule, mem_rule, proc_rule,
+                            metadata = response_metadata, 
+                            valid_addresses = (address,))
+        end
+    end
 
     return nothing
 end
