@@ -64,7 +64,6 @@ end
 ################################################################################
 # Placement
 ################################################################################
-
 struct CostEdge <: Mapper2.SA.TwoChannel
     source ::Int64
     sink   ::Int64
@@ -107,5 +106,3 @@ function Mapper2.routing_channel(::Type{KCStandard}, start, stop, edge)
     cost = edge.metadata["cost"]
     return CostChannel(start, stop, cost)
 end
-
-

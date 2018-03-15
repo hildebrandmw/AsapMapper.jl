@@ -78,8 +78,7 @@ include("Mapper2_Interface.jl")
 include("Dump.jl")
 
 # Customize placement/routing plus architectures.
-include("Placement.jl")
-include("Routing.jl")
+include("PNR.jl")
 include("experiments/Experiments.jl")
 
 #include("Plots.jl")
@@ -108,10 +107,9 @@ function place_and_route(architecture, profile_path, dump_path)
     # Initialize an uncompressed taskgraph constructor
     c = PMConstructor(architecture, profile_path)
     m = build_map(c)
-    # Run placement
-    m = place(m)
-    # Run Routing
-    m = route(m)
+    # Run pnr, do 3 retries.
+    num_retries = 3
+    lowtemp_pnr(m, num_retries)
     # Dump mapping to given dump path
     dump_map(m, dump_path)
 end

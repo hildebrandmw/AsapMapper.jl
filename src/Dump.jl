@@ -20,7 +20,9 @@ Record various info that may be helpful to the Project Manager.
 """
 function record_info!(json_dict, m::Map)
     create_dict(json_dict, "info", Dict{String,Any})
-    json_dict["info"]["routing_success"] = Mapper2.check_routing(m)
+    # Call the "check_routing" function and give it the "quiet" parameter to
+    # keep get rid of redundant prints.
+    json_dict["info"]["routing_success"] = Mapper2.check_routing(m, true)
 end
 
 ################################################################################

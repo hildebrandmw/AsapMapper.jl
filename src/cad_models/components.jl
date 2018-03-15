@@ -4,11 +4,10 @@
 """
     build_processor_tile(num_links, kwargs)
 
-Build a processor
+Build a processor tile.
 """
 function build_processor_tile(
               num_links; 
-              asap = true,
               include_memory = false,
               name = include_memory ? "memory_processor_tile" : "processor_tile", 
               directions = ("east", "north", "west", "south"),
@@ -30,11 +29,7 @@ function build_processor_tile(
     end
 
     # Instantiate the processor primitive - do special assignment for ASAP mapping.
-    if asap == true
-        proc_component = build_asap_processor(include_memory = include_memory)
-    else
-        proc_component = build_processor(num_links, include_memory = include_memory)
-    end
+    proc_component = build_processor(num_links, include_memory = include_memory)
 
     add_child(comp, proc_component, "processor")
 
@@ -44,15 +39,16 @@ function build_processor_tile(
         name = "$(dir)_mux"
         add_child(comp, routing_mux, name, num_links)
     end
+
     # Instantiate the muxes routing data to the fifos
-    num_fifo_entries = length(directions) * num_links + 1
-    fifo_mux = build_mux(num_fifo_entries, 1, metadata = cl_metadata)
+    # Allocate a mux input for each input on the circuit net.
+    num_fifo_inputs = length(directions) * num_links
+    fifo_mux = build_mux(num_fifo_inputs, 1, metadata = cl_metadata)
     add_child(comp, fifo_mux, "fifo_mux", num_fifos)
-    # Add memory ports - only memory processor tiles will have the necessary
-    # "memory_processor" attribute in the core to allow memory application
-    # to be mapped to them.
+
+    # Add memory ports and links if necessary.
     if include_memory
-        return_link = routing_metadata("memory_response_link")
+        return_link  = routing_metadata("memory_response_link")
         request_link = routing_metadata("memory_request_link")
         add_port(comp, "memory_in", "input", metadata = return_link)
         add_port(comp, "memory_out", "output", metadata = request_link)
@@ -82,6 +78,7 @@ function build_processor_tile(
         proc_port = "processor.fifo[$i]"
         add_link(comp, fifo_port, proc_port, metadata = cl_metadata)
     end
+
     # Connect input ports to inputs of muxes
 
     # Tracker Structure storing what ports on a mux have been used.
@@ -131,48 +128,6 @@ end
 ################################################################################
 #                           processor
 ################################################################################
-function build_asap_processor(;include_memory = false)
-    directions = ("east", "north", "west", "south", "east", "north", "south", "west")
-    # Build the metadata dictionary for the processor component
-    metadata = Dict{String,Any}()
-
-    if include_memory
-        comp_metadata = mem_proc_metadata()
-        name = "memory_processor"
-    else
-        comp_metadata = proc_metadata()
-        name = "standard_processor"
-    end
-
-    component = Component(name, metadata = comp_metadata)
-    # fifos
-    add_port(component, "fifo", "input", 2, metadata = proc_fifo_metadata(2))
-    # ports. Neet to play some indexing games for the metadata vector to get
-    # indices to line up with the Asap4 manual.
-    port_metadata = proc_output_metadata(4, 2)
-
-    # Traversal order - line up with port requirements from KiloCore.
-    nii = [("east",  0, 1),
-           ("north", 0, 2),
-           ("west",  0, 3),
-           ("south", 0, 4),
-           ("east",  1, 5),
-           ("north", 1, 6),
-           ("south", 1, 7),
-           ("west",  1, 8)]
-
-    for (str, i, port_index) in nii
-        add_port(component, "$str[$(i)]", "output", metadata = port_metadata[port_index])
-    end
-    # Add memory ports. Will only be connected in the memory processor tile.
-    if include_memory
-        add_port(component, "memory_in", "input", metadata = proc_memory_return_metadata())
-        add_port(component, "memory_out", "output", metadata = proc_memory_request_metadata())
-    end
-    # Return the created type
-    return component
-end
-
 function build_processor(num_links;
                          include_memory = false, 
                          num_fifos = 2,
@@ -195,6 +150,7 @@ function build_processor(num_links;
     # ports. Neet to play some indexing games for the metadata vector to get
     # indices to line up with the Asap4 manual.
     port_metadata = proc_output_metadata(length(directions), num_links)
+    # NOTE: Iterators.product iterates over the first element the quickest.
     for (port_index,(str,i)) in enumerate(Iterators.product(directions, 1:num_links))
         add_port(component, "$str[$(i-1)]", "output", metadata = port_metadata[port_index])
     end
