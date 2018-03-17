@@ -90,23 +90,23 @@ include("experiments/Experiments.jl")
 
 function testmap()
 
-    #arch = asap4(2, KCStandard)
-    #arch = asap3_hex(2, KCStandard)
-    arch = asap3(2, KCStandard)
-    #arch = generic(16,16,4,12, KCStandard)
+    #a = asap4(2, KCStandard)
+    a = asap3(2, KCStandard)
+    #a = generic(16,16,4,12, KCStandard)
 
-    t = build_taskgraph(PMConstructor("mapper_in.json"))
-    #tg = load_taskgraph("alexnet")
-    return NewMap(arch, t)
+    path = joinpath(PKGDIR, "apps", "asap3", "mapper_in_1.json")
+    t = build_taskgraph(PMConstructor(path))
+
+    return NewMap(a, t)
 end
 
 ################################################################################
 # Generic Place and Route function.
 ################################################################################
 
-function place_and_route(architecture, profile_path, dump_path)
+function place_and_route(profile_path, dump_path)
     # Initialize an uncompressed taskgraph constructor
-    c = PMConstructor(architecture, profile_path)
+    c = PMConstructor(profile_path)
     m = build_map(c)
     # Run pnr, do 3 retries.
     num_retries = 3

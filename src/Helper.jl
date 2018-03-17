@@ -1,33 +1,16 @@
-struct PathWalker{G}
-    g::G
+# Type for specifying paths through nested dictionaries.
+struct KeyChain{T}
+    keys::T
 end
+KeyChain(args...) = KeyChain(args)
 
-pathwalk(g::G) where G = PathWalker(g)
-
-Base.start(p::PathWalker) = first(Mapper2.Helper.source_vertices(p.g))
-function Base.next(p::PathWalker, s) 
-    o = Mapper2.Helper.outneighbors(p.g, s)
-    return isempty(o) ? (s,nothing) : (s, first(o))
+function Base.getindex(d::Dict, k::KeyChain)
+    # Using the "pass-by-sharing" semantics, argument `d` will not be changed.
+    for i in k.keys
+        d = d[i]
+    end
+    return d
 end
-Base.done(p::PathWalker, s) = s == nothing
-
-
-# Helful for routines that specify connection rules. collect all elements of
-# a tuple hierarchy.
-splatify(a::Tuple) = (splatify(a[1])..., splatify(a[2:end])...)
-splatify(a::Tuple{}) = ()
-splatify(a) = (a,)
-
-struct Splatter{I}
-    iter::I 
-end
-
-Base.start(s::Splatter) = start(s.iter)
-function Base.next(s::Splatter, state) 
-    (ns, nextstate) = next(s.iter, state)
-    return (splatify(ns), nextstate)
-end
-Base.done(s::Splatter, state) = done(s.iter, state)
 
 ################################################################################
 

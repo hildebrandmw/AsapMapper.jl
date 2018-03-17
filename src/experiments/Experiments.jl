@@ -83,6 +83,12 @@ function gzsplitext(s)
 end
 
 
+"""
+    augment(dir::String, new::String)
+
+Add a numeric suffix to `new` so it does not conflict with anything in directory
+`dir`. Create `dir` if it does nto exist.
+"""
 function augment(dir::String, new::String)
     dir = isempty(dir) ? "." : dir
     ispath(dir) || mkdir(dir)

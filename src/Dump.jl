@@ -174,7 +174,7 @@ end
 
 function make_offset_list(g)
     path = CartesianIndex{2}[]
-    for p in pathwalk(g)
+    for p in linearize(g)
         # Get the address from the path
         addr = Mapper2.MapperCore.getaddress(p)
         # eliminate zero addresses

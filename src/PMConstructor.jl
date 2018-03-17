@@ -62,7 +62,6 @@ taskgraph.
     swapping out destination fifos.
 """
 struct PMConstructor <: MapConstructor
-    arch::String
     file::String
 end
 
@@ -73,27 +72,15 @@ function Base.parse(c::PMConstructor)
     return jsn
 end
 
+################################################################################
+# build_map - Top level function for creating Map objects from the Project
+#   Manager.
+################################################################################
 function build_map(c::PMConstructor)
     # Parse the input json file
     json_dict = parse(c)     
-    # get the options dict - check for architecture.
-    options = json_dict["mapper_options"]
-    if haskey(options, "architecture")
-        arch = options["architecture"]
-        @info "Using architecture $arch from the options dictionary."
-    else
-        arch = c.arch
-    end
-
-    # decode architecture. Make copies of internal components to allow component
-    # specific naming.
-    if arch == "asap4"
-        a = asap4(2, KCStandard)
-    elseif arch == "asap3"
-        a = asap3(2, KCStandard)
-    else
-        KeyError("Architecture $architecture not implemented.")
-    end
+    # Build the architecture based off the config file.
+    a = build_architecture(c, json_dict)
     # Build taskgraph
     t = build_taskgraph(c, json_dict)
     # Run operations on the architecture according.
@@ -101,6 +88,28 @@ function build_map(c::PMConstructor)
 
     return NewMap(a, t)
 end
+
+#-------------------------------------------------------------------------------
+# Methods for building the architecture
+
+# Location in the input dictionary where the architecture specification
+# can be found.
+const _arch_path_ = KeyChain("mapper_options", "architecture")
+
+# Dispatch function.
+function build_architecture(c::PMConstructor, json_dict)
+    # Get the architecture string from the dictionary.
+    arch_string = json_dict[_arch_path_]
+    # Perform manual dispatch based on the string.
+    if arch_string == "Array_Asap3"
+        return asap3(2, KCStandard)
+    elseif arch_string == "Array_Asap4"
+        return asap4(2, KCStandard)
+    else
+        error("Unrecognized Architecture: $arch_string")
+    end
+end
+#-------------------------------------------------------------------------------
 
 const _pm_task_required = ("type",)
 const _pm_task_optional = ()

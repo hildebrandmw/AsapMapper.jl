@@ -34,7 +34,7 @@ function plot_route(m, spacing = 20, tilesize = 20)
         y = Float64[]
 
         symbol_count = 0
-        for port in pathwalk(edge)
+        for port in linearize(edge)
             # Filter out muxes
             typeof(port) <: AddressPath && continue
 
