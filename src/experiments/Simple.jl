@@ -16,21 +16,30 @@ end
 
 dirstring(::SimpleExperiment) = "simple_experiment"
 
-struct SimpleResult <: Result
+struct SimpleResult{T} <: Result
     arch    ::FunctionCall
     app     ::FunctionCall
-    mapping ::Vector{Vector{Mapping}}
+    mapping ::T
 end
 
-function run(exp::SimpleExperiment, dir = results_dir())
+function run(ex::SimpleExperiment, dir = results_dir())
     dir = augment(dir,ex)
-    save(exp, dir)
-    arch = call(exp.arch)
-    app  = call(exp.app)
+    save(ex, dir)
+    arch = call(ex.arch)
+    app  = call(ex.app)
     # Run place and route
-    call(exp.place, arch, app)
-    results = call(exp.route, arch, app)
+    call(ex.place, arch, app)
+    results = call(ex.route, arch, app)
     
-    result_struct = SimpleResult(exp.arch, exp.app, results)
+    result_struct = SimpleResult(ex.arch, ex.app, results)
     save(result_struct, dir)
+end
+
+################################################################################
+# Reconstruction methods.
+################################################################################
+function reconstruct(s::SimpleResult{T}) where T <: Mapping
+    m = NewMap(call(s.arch), call(s.app))
+    m.mapping = s.mapping
+    return m
 end

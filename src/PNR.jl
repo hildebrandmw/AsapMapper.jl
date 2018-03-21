@@ -38,6 +38,19 @@ function lowtemp_pnr(m::Map, iterations; place_kwargs...)
     return m
 end
 
+function basic_place(arch::TopLevel, taskgraph::Taskgraph)
+    m = NewMap(arch, taskgraph)
+    place(m)
+    MapperCore.save(m, "temp.jls")
+end
+
+function basic_route(arch::TopLevel, taskgraph::Taskgraph)
+    m = NewMap(arch, taskgraph)
+    MapperCore.load(m, "temp.jls")
+    route(m)
+    return m.mapping
+end
+
 
 ################################################################################
 # Custom Placement Functions

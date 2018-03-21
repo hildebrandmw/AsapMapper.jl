@@ -27,7 +27,7 @@ dirstring(::Experiment) = "experiment"
 results_dir() = joinpath(RESULTS, string(Date(now())))
 
 function save(exp::Experiment, dir::String)
-    ispath(dir) || mkpath(dir)      
+    ispath(dir) || mkpath(dir)
     fullpath = augment(dir, _exprfile)
     @assert ispath(fullpath) == false
 
@@ -59,14 +59,14 @@ function append_suffix(iter, key::String)
 
     matches = Int[]
     for k in iter
-        attach!(matches, match(rgx, k)) 
+        attach!(matches, match(rgx, k))
     end
 
     return length(matches) == 0 ? "$(key)_1" : "$(key)_$(1+maximum(matches))"
 end
 
 attach!(a, m) = nothing
-function attach!(a::Vector{T}, m::RegexMatch) where T 
+function attach!(a::Vector{T}, m::RegexMatch) where T
     val = tryparse(T, m.match)
     if !isnull(val)
         push!(a, val.value)
@@ -91,7 +91,7 @@ Add a numeric suffix to `new` so it does not conflict with anything in directory
 """
 function augment(dir::String, new::String)
     dir = isempty(dir) ? "." : dir
-    ispath(dir) || mkdir(dir)
+    ispath(dir) || mkpath(dir)
 
     prefix, ext = gzsplitext(new)
     newprefix = append_suffix(stripped_contents(dir), prefix)
@@ -101,4 +101,3 @@ end
 
 # Fallback experiment based augment function
 augment(dir::String, ex::Experiment) = augment(dir, dirstring(ex))
-

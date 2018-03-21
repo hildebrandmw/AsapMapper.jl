@@ -19,11 +19,11 @@ taskgraph.
     Expected types: `String`
 
 ## Computed metadata - used for internal computation.
-* `"mapper_type"` - Mapper specific type for this task. Generally, there 
-    will be a 1-to-1 mapping between Mapper types and Project Manager types, 
+* `"mapper_type"` - Mapper specific type for this task. Generally, there
+    will be a 1-to-1 mapping between Mapper types and Project Manager types,
     except that Mapper types will all lower case.
 
-    Exceptions: Memories will be converted to either "memory_1port" or 
+    Exceptions: Memories will be converted to either "memory_1port" or
     "memory_2port" depending on the number of neighbors they have. This ensures
     that memory tasks needing 2 ports will not be mapped to a single ported
     memory on Asap 4.
@@ -39,7 +39,7 @@ taskgraph.
 * `"source_index"` - The original index in the Project Manager's datastructure
     where this edge originated. Used to disambiguate between multiple links
     and allows the Project Manager to reconstruct routings.
-    
+
     Expected types: `String, Int`
 
 * `"dest_task"` - The name of the destination task. Expected types: `String`.
@@ -58,7 +58,7 @@ taskgraph.
 * `"cost"` - Mapper assigned cost to the link. Currently, only assigns a higher
     weight to memory links.
 
-* `"preserve_dest"` - Preserve the destination index. This keeps the mapper from 
+* `"preserve_dest"` - Preserve the destination index. This keeps the mapper from
     swapping out destination fifos.
 """
 struct PMConstructor <: MapConstructor
@@ -78,7 +78,7 @@ end
 ################################################################################
 function build_map(c::PMConstructor)
     # Parse the input json file
-    json_dict = parse(c)     
+    json_dict = parse(c)
     # Build the architecture based off the config file.
     a = build_architecture(c, json_dict)
     # Build taskgraph
@@ -246,7 +246,7 @@ function transform_task_types(t::Taskgraph)
             task.metadata["mapper_type"] = direct_task_dict[task_type]
         elseif task_type == "Memory"
             # join the input and output to determine if 1 port or 2
-            neighbors = vcat(in_node_names(t, task.name), 
+            neighbors = vcat(in_node_names(t, task.name),
                              out_node_names(t, task.name))
             num_neighbors = length(unique(neighbors))
 
@@ -277,7 +277,7 @@ end
 
 function apply_link_weights(t::Taskgraph)
     for edge in getedges(t)
-        if edge.metadata["pm_class"] in ("Memory_Request_Link", "Memory_Response_Link") 
+        if edge.metadata["pm_class"] in ("Memory_Request_Link", "Memory_Response_Link")
             edge.metadata["cost"] = 5.0
         else
             edge.metadata["cost"] = 1.0
@@ -306,9 +306,9 @@ function Base.ismatch(c::Component, pm_base_type)
         return false
     # input/output handlers done by direct look-up
     elseif pm_base_type == "Input_Handler_Core"
-        return "input_handler" in c.metadata["attributes"] 
+        return "input_handler" in c.metadata["attributes"]
     elseif pm_base_type == "Output_Handler_Core"
-        return "output_handler" in c.metadata["attributes"] 
+        return "output_handler" in c.metadata["attributes"]
     end
     return false
 end
@@ -316,7 +316,7 @@ end
 """
     name_mappables(a::TopLevel, json_dict)
 
-Find the project-manager names for components in the architecture and assign 
+Find the project-manager names for components in the architecture and assign
 their metadata accordingly.
 """
 function name_mappables(a::TopLevel, json_dict)

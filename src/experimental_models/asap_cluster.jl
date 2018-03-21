@@ -27,6 +27,8 @@ function mem_addresses(v::Vector{MemoryLocation{D}}) where D
     return a
 end
 
+mem_locations(v::Vector{MemoryLocation{D}}) where D = [i.address for i in v]
+
 function mem_neighbors(v::Vector{MemoryLocation{D}}) where D
     a = Set{Address{D}}()
     for i in v
@@ -70,6 +72,7 @@ function asap_cluster(num_links, A)
 
 
     mem_addrs = mem_addresses(memories)
+    mems = mem_locations(memories)
     mem_neighbor_addrs = mem_neighbors(memories)
 
     ####################
@@ -98,7 +101,7 @@ function asap_cluster(num_links, A)
     # 2 Port Memory #
     #################
     memory = build_memory(2)
-    for mem_addr in mem_addrs
+    for mem_addr in mems
         add_child(arch, memory, mem_addr)
     end
 

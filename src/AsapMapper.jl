@@ -9,12 +9,12 @@ using IterTools, JSON, GZip
 is07 ? (using Logging) : (using MicroLogging)
 using Missings
 using Compat
-#using JLD2, FileIO
 
 # Set up directory paths
 const SRCDIR = @__DIR__
 const PKGDIR = dirname(SRCDIR)
 const RESULTS = joinpath(PKGDIR, "results")
+const APPS    = joinpath(PKGDIR, "apps")
 
 export  place_and_route,
         testmap,
@@ -31,13 +31,13 @@ export  place_and_route,
         # Experiments
         Experiment,
         SharedPlacement,
+        MultiArchitecture,
         # Results
         Result,
         SharedPlacementResult,
         # Misc
         FunctionCall,
         call
-
 
 # Helper Functions
 function oneofin(a,b)
@@ -114,5 +114,15 @@ function place_and_route(profile_path, dump_path)
     # Dump mapping to given dump path
     dump_map(m, dump_path)
 end
+
+################################################################################
+# Custom loader
+################################################################################
+function load_saved_taskgraph(path)
+    c = PMConstructor(joinpath(APPS, "$path.json"))
+    return build_taskgraph(c)
+end
+
+
 
 end # module
