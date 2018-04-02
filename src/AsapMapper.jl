@@ -90,13 +90,16 @@ include("experiments/Experiments.jl")
 
 function testmap()
 
-    #a = asap4(2, KCStandard)
+    # Build architecture
+    # a = asap4(2, KCStandard)
     a = asap3(2, KCStandard)
-    #a = generic(16,16,4,12, KCStandard)
+    # a = generic(16,16,4,12, KCStandard)
 
+    # Build taskgraph - look in "apps" directory
     path = joinpath(PKGDIR, "apps", "asap3", "mapper_in_1.json")
     t = build_taskgraph(PMConstructor(path))
 
+    # Construct a "Map" from the architecture and taskgraph.
     return NewMap(a, t)
 end
 
