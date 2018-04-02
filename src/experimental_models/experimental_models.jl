@@ -1,4 +1,5 @@
 include("asap_cluster.jl")
+include("asap_colmem.jl")
 
 # Base components for architecture modeling.
 #include("components.jl")
