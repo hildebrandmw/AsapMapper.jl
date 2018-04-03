@@ -164,8 +164,8 @@ function build_processor(num_links;
     return component
 end
 
-function build_memory(nports = 2)
-    component = Component("memory_$(nports)port", metadata = mem_nport_metadata(nports))
+function build_memory(nports = 2; vertical = false)
+    component = Component("memory_$(nports)port", metadata = mem_nport_metadata(nports, vertical))
 
     # Instantiate ports
     add_port(component, "in", "input", nports, metadata = mem_memory_request_metadata(nports))

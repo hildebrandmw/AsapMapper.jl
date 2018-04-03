@@ -39,12 +39,19 @@ function mem_proc_metadata()
     )
 end
 
-function mem_nport_metadata(nports::Int)
+function mem_nport_metadata(nports::Int, vertical::Bool)
     attrs = ["memory_$(i)port" for i in 1:nports]
+    # Setup shadow offset
+    if vertical
+        shadow_offset = [Address(1,0)]
+    else
+        shadow_offset = [Address(0,1)]
+    end
+
     return Dict{String,Any}(
         "attributes" => attrs,
         # Options for plotting
-        "shadow_offset" => [Address(0,1)],
+        "shadow_offset" => shadow_offset,
         "fill"          => "memory"
     )
 end

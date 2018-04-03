@@ -21,7 +21,6 @@ const TN = TaskgraphNode
 const TE = TaskgraphEdge
 const AKC = AbstractKC
 
-
 function Mapper2.ismappable(::Type{T}, c::Component) where {T <: AKC}
     return haskey(c.metadata, "attributes") && length(c.metadata["attributes"]) > 0
 end

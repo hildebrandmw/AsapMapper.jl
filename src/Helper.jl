@@ -14,7 +14,7 @@ end
 
 ################################################################################
 
-type_sanitize(::Type{T}, v::T) where T = v
+type_sanitize(::Type{T}, v::T) where T = identity(v)
 function type_sanitize(::Type{T}, v::U) where {T,U}
     throw(TypeError(:type_sanitize, "Unexpected type for link definitions",T,U))
 end

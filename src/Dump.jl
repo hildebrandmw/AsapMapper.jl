@@ -65,8 +65,6 @@ struct MapDumpRoute <: MapDump
     offset_list     ::Vector
 end
 
-JSON.lower(m::MapDump) = Dict(string(f) => getfield(m,f) for f in fieldnames(typeof(m)))
-
 """
     skeleton_dump(m::Map)
 

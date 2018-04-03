@@ -164,13 +164,13 @@ end
 ################################################################################
 
 function plot_route(m::Map{A,2}, spacing = 10, tilesize = 20) where A
-    boxes = getboxes(m, spacing, tilesize)
+    boxes  = getboxes(m, spacing, tilesize)
     routes = getroutes(m, spacing, tilesize)
     return routeplot(boxes, routes)
 end
 
 function plot_ratsnest(m::Map, spacing = 10, tilesize = 20)
-    boxes = getboxes(m, spacing, tilesize)
+    boxes  = getboxes(m, spacing, tilesize)
     routes = getlines(m, spacing, tilesize)
     return routeplot(boxes, routes)
 end

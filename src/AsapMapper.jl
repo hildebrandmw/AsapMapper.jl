@@ -82,21 +82,22 @@ include("Dump.jl")
 include("PNR.jl")
 include("experiments/Experiments.jl")
 
-#include("Plots.jl")
+include("Plots.jl")
 
 ################################################################################
 # Useful for testing and debugging
 ################################################################################
 
 function testmap()
-
     # Build architecture
-    # a = asap4(2, KCStandard)
-    a = asap3(2, KCStandard)
+    #a = asap4(2, KCStandard)
+    #a = asap3(2, KCStandard)
+    a = asap_colmem(2, KCStandard, (32, 32), 2, 8)
+    #a = asap_colmem(2, KCStandard, (27, 27), 2, 8)
     # a = generic(16,16,4,12, KCStandard)
 
     # Build taskgraph - look in "apps" directory
-    path = joinpath(PKGDIR, "apps", "asap3", "mapper_in_1.json")
+    path = joinpath(PKGDIR, "apps", "asap3", "mapper_in_2.json")
     t = build_taskgraph(PMConstructor(path))
 
     # Construct a "Map" from the architecture and taskgraph.
@@ -107,16 +108,17 @@ end
 # Generic Place and Route function.
 ################################################################################
 
-function place_and_route(profile_path, dump_path)
+function place_and_route(profile_path::String, dump_path::String)
     # Initialize an uncompressed taskgraph constructor
     c = PMConstructor(profile_path)
     m = build_map(c)
     # Run pnr, do 3 retries.
-    num_retries = 3
-    lowtemp_pnr(m, num_retries)
+    m = place_and_route(m, 3)
     # Dump mapping to given dump path
     dump_map(m, dump_path)
 end
+
+place_and_route(m::Map, num_retries = 3) = lowtemp_pnr(m, num_retries)
 
 ################################################################################
 # Custom loader

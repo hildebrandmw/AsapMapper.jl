@@ -1,3 +1,27 @@
+function asap3_exp(nlinks, A)
+    fill = AsapProc(nlinks)
+    dims = (32, 32)
+
+    special = []
+
+    # Input handlers
+    ih = InputHandler(nlinks)
+    ih_locations = TileLocation{2}((2,1), (0,1))
+    push!(special, InstDef(ih, [ih_locations]))
+
+    # Output Handler
+    oh = OutputHandler(nlinks)
+    oh_locations = TileLocation{2}((2,32), (0,-1))
+    push!(special, InstDef(oh, [oh_locations]))
+
+    # Memories - inform that there is a processor neighbor.
+    mem = Memory(2, AsapProc(nlinks, memory = true))
+    mem_locs = [TileLocation{2}((33,c),[(-1,0),(-1,1)]) for c in chain(2:2:12, 22:2:32)]
+    push!(special, InstDef(mem, mem_locs))
+
+    build(A, "asap3", special, fill, dims)
+end
+
 function asap3(num_links,A)
     arch = TopLevel{A,2}("asap3")
 

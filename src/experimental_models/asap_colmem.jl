@@ -1,5 +1,9 @@
-function asap_colmem(num_links, A, dim::Tuple{Int64,Int64}, mem_cols, vert_spacing)
+function asap_colmem(num_links, A, dim::Tuple{Int64,Int64}, mem_cols::Int, mem_rows::Int)
     arch = TopLevel{A,2}("asap_colmem")
+
+    # Constants - size of memories
+    memory_height = 2
+    memory_width  = 1
 
     # Extra parameters
     num_fifos = 2
@@ -7,23 +11,33 @@ function asap_colmem(num_links, A, dim::Tuple{Int64,Int64}, mem_cols, vert_spaci
     col = dim[2]
 
     # generate memory locations according to num of mem cols and vertical spacing
-    hori_spacing = floor((col-2)/(mem_cols))
-    mem_rows = floor(row/(vert_spacing+2))
+    h_spacing = floor(Int64, col / mem_cols)
+    v_spacing = floor(Int64, row / mem_rows)
+
+    if v_spacing < memory_height
+        error("Too many memory rows")
+    end
+    if h_spacing < memory_width
+        error("Too many memory columns")
+    end
+
+    # Get start locations by shifting. Add 1 for proc shift offset.
+    h_start = 1 + h_spacing >> 1
+    v_start = 1 + v_spacing >> 1
+
     memories = Array{MemoryLocation{2},1}()
+
+    # Make proc connections on to left and right of base memory address.
     offsets = [(0,-1),(0,1)]
-    prev_col = 0
-    for r = 1:mem_rows
-        for c = 1:mem_cols
-            if (prev_col == (Int64((hori_spacing*c+1))-2)) && (prev_col != 0)
-                error("$mem_cols memory columns cannot fit inside row:
-                       $row and column: $col architecture.")
-            end
-            address = (Int64((vert_spacing+2)*r), Int64((hori_spacing*c+2)))
-            other_addresses = (Int64(((vert_spacing+2)*r)+1),
-                               Int64((hori_spacing*c+2)))
+
+    for r = 0:mem_rows-1
+        for c = 0:mem_cols-1
+
+            address = ((v_spacing*r) + v_start, (h_spacing*c) + h_start)
+            other_addresses = address .+ (1,0)
+
             m = MemoryLocation(address, other_addresses, offsets)
             push!(memories,m)
-            prev_col = Int64((hori_spacing*c+1))
         end
     end
 
@@ -56,7 +70,7 @@ function asap_colmem(num_links, A, dim::Tuple{Int64,Int64}, mem_cols, vert_spaci
     #################
     # 2 Port Memory #
     #################
-    memory = build_memory(2)
+    memory = build_memory(2, vertical = true)
     for mem_addr in mems
         add_child(arch, memory, mem_addr)
     end
@@ -102,9 +116,6 @@ function connect_memories_colmem(arch, memories)
         "link_class"    => "memory_response_link",
    )
 
-    ###########################
-    # Connect 1 port memories #
-    ###########################
     proc_rule = x -> search_metadata!(x, "attributes", "memory_processor", in)
     mem_rule = x -> search_metadata!(x, "attributes", "memory_2port", in)
 
@@ -128,14 +139,20 @@ function connect_memories_colmem(arch, memories)
     return nothing
 end
 
+
+# Connect processors across memories. Call this after the normal 
+# "connect_processors" - that way only processors with free links that weren't
+# connected in the previous pass will be connected.
 function connect_processors_colmem(tl, num_links)
     fn = x -> search_metadata!(x, "attributes", "processor", in)
     src_rule = fn
     dst_rule = fn
 
-    # Build metadata dictionary for capacity and cost
+    # Set "cost" = 2.0 to prevent over-congestion of the memory links. Setting
+    # this to 1.0 basically results in the router always trying to route over
+    # memories.
     metadata = Dict(
-        "cost"          => 1.0,
+        "cost"          => 2.0,
         "capacity"      => 1,
         "link_class"    => "circuit_link"
     )
