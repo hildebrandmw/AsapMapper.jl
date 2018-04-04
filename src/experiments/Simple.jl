@@ -43,3 +43,9 @@ function reconstruct(s::SimpleResult{T}) where T <: Mapping
     m.mapping = s.mapping
     return m
 end
+
+function reconstruct(s::SimpleResult{T}, i::Int) where T <: Vector{Mapping}
+    m = NewMap(call(s.arch), call(s.app))
+    m.mapping = s.mapping[i]
+    return m
+end

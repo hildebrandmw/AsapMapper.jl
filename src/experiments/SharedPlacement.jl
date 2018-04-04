@@ -50,6 +50,8 @@ function run(ex::SharedPlacement, dir::String = results_dir())
     save(ex, dir)
 end
 
+
+#=
 function testrun()
     arch        = asap4 
     arch_args   = [(2,KCStandard),
@@ -68,3 +70,4 @@ function testrun()
     expr = SharedPlacement(arch, arch_args, arch_kwargs, app, place, route)
     run(expr)
 end
+=#

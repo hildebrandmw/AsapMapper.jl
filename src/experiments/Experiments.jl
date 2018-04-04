@@ -13,6 +13,7 @@ abstract type Result end
 # Includes
 ################################################################################
 include("Simple.jl")
+include("PlaceParameters.jl")
 include("SharedPlacement.jl")
 include("MultiArch.jl")
 
@@ -101,3 +102,4 @@ end
 
 # Fallback experiment based augment function
 augment(dir::String, ex::Experiment) = augment(dir, dirstring(ex))
+
