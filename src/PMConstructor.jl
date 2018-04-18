@@ -327,12 +327,12 @@ function name_mappables(a::TopLevel, json_dict)
         found_match = false
 
         # Spit out a warning is the address is not in the model.
-        if !haskey(a.children, addr)
+        if !haskey(a.address_to_child, addr)
             @warn "No address $addr found for core $(core["name"])."
             continue
         end
 
-        parent = a.children[addr]
+        parent = getchild(a, addr)
         for path in walk_children(parent)
             component = parent[path]
             # Try to match the base_type of the Project_Manager core with

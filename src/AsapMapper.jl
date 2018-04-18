@@ -1,7 +1,5 @@
 module AsapMapper
 
-const USEPLOTS = false
-
 const is07 = VERSION > v"0.7.0-"
 
 using Mapper2
@@ -91,12 +89,12 @@ include("experiments/Experiments.jl")
 function testmap()
 
     # Build architecture
-    # a = asap4(2, KCStandard)
-    a = asap3(2, KCStandard)
+    a = asap4(2, KCStandard)
+    #a = asap3(2, KCStandard)
     # a = generic(16,16,4,12, KCStandard)
 
     # Build taskgraph - look in "apps" directory
-    path = joinpath(PKGDIR, "apps", "asap3", "mapper_in_1.json")
+    path = joinpath(PKGDIR, "apps", "asap4", "mapper_in_3.json")
     t = build_taskgraph(PMConstructor(path))
 
     # Construct a "Map" from the architecture and taskgraph.

@@ -64,7 +64,8 @@ function getboxes(m::Map{A,2}, spacing, tilesize) where A
     a = m.architecture
     # Create draw boxes for each tile in the array.
     boxes = DrawBox[]
-    for (addr, child) in a.children
+    for (name, child) in a.children
+        addr = getaddress(a, name)
         # scale x,y
         if haskey(child.metadata, "shadow_offset")
             addrs = [addr + o for o in child.metadata["shadow_offset"]]
@@ -98,7 +99,7 @@ function getroutes(m::Map{A,2}, spacing, tilesize) where A
             # Only look at global port paths.
             isglobalport(path) || continue
             # Get the address from the path.
-            address = getaddress(path)
+            address = getaddress(a, path)
             # Create offsets for smooth paths
 
             # Big offset for macro location in the whole array

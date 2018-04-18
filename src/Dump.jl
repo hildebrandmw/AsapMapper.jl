@@ -79,7 +79,7 @@ function skeleton_dump(m::Map)
     for (name, address_path) in m.mapping.nodes
         node = getnode(m.taskgraph, name)
         
-        addr = Mapper2.MapperCore.getaddress(address_path)
+        addr = Mapper2.MapperCore.getaddress(m.architecture,address_path)
         addr = addr - CartesianIndex(2,2)
 
         component = m.architecture[address_path]
@@ -134,7 +134,7 @@ function extract_routings(m)
         # Build the route tuple
         source_task = first(getsources(edge)) 
         dest_task   = first(getsinks(edge))
-        offset_list = make_offset_list(graph)
+        offset_list = make_offset_list(arch, graph)
 
         source_index = edge.metadata["source_index"]
         dest_index   = edge.metadata["dest_index"]
@@ -172,13 +172,13 @@ function extract_routings(m)
     return routings
 end
 
-function make_offset_list(g)
+function make_offset_list(arch, g)
     path = CartesianIndex{2}[]
     for p in linearize(g)
+        # Skip global links since addresses they don't have an address
+        isgloballink(p) && continue
         # Get the address from the path
-        addr = Mapper2.MapperCore.getaddress(p)
-        # eliminate zero addresses
-        iszero(addr) && continue
+        addr = Mapper2.MapperCore.getaddress(arch, p)
         if !in(addr,path)
             push!(path, addr)
         end
