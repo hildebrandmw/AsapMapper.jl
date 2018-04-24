@@ -90,11 +90,11 @@ function testmap()
 
     # Build architecture
     a = asap4(2, KCStandard)
-    #a = asap3(2, KCStandard)
+    # a = asap3(2, KCStandard)
     # a = generic(16,16,4,12, KCStandard)
 
     # Build taskgraph - look in "apps" directory
-    path = joinpath(PKGDIR, "apps", "asap4", "mapper_in_3.json")
+    path = joinpath(PKGDIR, "apps", "mapper_in_2.json")
     t = build_taskgraph(PMConstructor(path))
 
     # Construct a "Map" from the architecture and taskgraph.
@@ -105,7 +105,18 @@ end
 # Generic Place and Route function.
 ################################################################################
 
+function swoop(profilepath::String)
+    savedir = joinpath(PKGDIR, "apps") 
+    # Create a name for this in the save directory.
+    savename = augment(savedir, "mapper_in.json")
+    savepath = joinpath(savedir, savename)
+
+    println("Swooping")
+    cp(profilepath, savepath)
+end
+
 function place_and_route(profile_path, dump_path)
+    # swoop(profile_path)
     # Initialize an uncompressed taskgraph constructor
     c = PMConstructor(profile_path)
     m = build_map(c)
