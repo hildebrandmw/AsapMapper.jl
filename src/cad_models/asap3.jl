@@ -7,10 +7,10 @@ function asap3(num_links,A)
 
     # Get a processor tile and instantiate it.
     processor = build_processor_tile(num_links)
-    for r in 2:31, c in 2:33
+    for r in 0:29, c in 0:31
         add_child(arch, processor, CartesianIndex(r,c))
     end
-    for r in 32:33, c in 14:21
+    for r in 30:31, c in 12:19
         add_child(arch, processor, CartesianIndex(r,c))
     end
 
@@ -19,10 +19,10 @@ function asap3(num_links,A)
 	####################
 
 	memory_processor = build_processor_tile(num_links, include_memory = true)
-	for r = 32, c = 2:13
+	for r = 30, c = 0:11
         add_child(arch, memory_processor, CartesianIndex(r,c))
 	end
-	for r = 32, c = 22:33
+	for r = 30, c = 20:31
         add_child(arch, memory_processor, CartesianIndex(r,c))
 	end
 
@@ -30,10 +30,10 @@ function asap3(num_links,A)
 	# 2 Port Memory #
 	#################
     memory_2port = build_memory(2)
-	for r = 33, c in (2:2:12)
+	for r = 31, c in (0:2:10)
         add_child(arch, memory_2port, CartesianIndex(r,c))
 	end
-	for r = 33, c in (22:2:32)
+	for r = 31, c in (20:2:30)
         add_child(arch, memory_2port, CartesianIndex(r,c))
 	end
 
@@ -41,13 +41,13 @@ function asap3(num_links,A)
 	# Input Handler #
 	#################
 	input_handler = build_input_handler(1)
-    add_child(arch, input_handler, CartesianIndex(2,1))
+    add_child(arch, input_handler, CartesianIndex(0,-1))
 
 	##################
 	# Output Handler #
 	##################
 	output_handler = build_output_handler(1)
-    add_child(arch, output_handler, CartesianIndex(2,34))
+    add_child(arch, output_handler, CartesianIndex(0,32))
 
 	connect_processors(arch,num_links)
     connect_io(arch,num_links)

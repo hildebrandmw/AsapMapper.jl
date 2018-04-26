@@ -80,7 +80,6 @@ function skeleton_dump(m::Map)
         node = getnode(m.taskgraph, name)
         
         addr = Mapper2.MapperCore.getaddress(m.architecture,address_path)
-        addr = addr - CartesianIndex(2,2)
 
         component = m.architecture[address_path]
         core_name = component.metadata["pm_name"]

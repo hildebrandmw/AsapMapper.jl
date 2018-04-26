@@ -44,7 +44,7 @@ function mem_nport_metadata(nports::Int)
     return Dict{String,Any}(
         "attributes" => attrs,
         # Options for plotting
-        "shadow_offset" => [Address(0,1)],
+        "shadow_offset" => [Address(0,i) for i in 1:nports-1],
         "fill"          => "memory"
     )
 end

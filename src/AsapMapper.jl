@@ -80,7 +80,7 @@ include("Dump.jl")
 include("PNR.jl")
 include("experiments/Experiments.jl")
 
-#include("Plots.jl")
+include("Plots.jl")
 
 ################################################################################
 # Useful for testing and debugging
@@ -89,12 +89,14 @@ include("experiments/Experiments.jl")
 function testmap()
 
     # Build architecture
-    a = asap4(2, KCStandard)
+    # a = asap_cluster(2, KCStandard)
+    # a = asap4(2, KCStandard)
     # a = asap3(2, KCStandard)
     # a = generic(16,16,4,12, KCStandard)
 
     # Build taskgraph - look in "apps" directory
-    path = joinpath(PKGDIR, "apps", "mapper_in_2.json")
+    path = joinpath(PKGDIR, "apps", "mapper_in_16.json")
+    return build_map(PMConstructor(path))
     t = build_taskgraph(PMConstructor(path))
 
     # Construct a "Map" from the architecture and taskgraph.

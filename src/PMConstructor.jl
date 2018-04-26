@@ -321,8 +321,8 @@ their metadata accordingly.
 """
 function name_mappables(a::TopLevel, json_dict)
     for core in json_dict["array_cores"]
-        # Get the address for the core - apply pm->mapper offset
-        addr = CartesianIndex(core["address"]...) + CartesianIndex(2,2)
+        # Get the address for the core
+        addr = CartesianIndex(core["address"]...)
         base_type = core["base_type"]
         found_match = false
 
