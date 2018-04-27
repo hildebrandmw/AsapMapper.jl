@@ -102,9 +102,9 @@ function build_architecture(c::PMConstructor, json_dict)
     arch_string = json_dict[_arch_path_]
     # Perform manual dispatch based on the string.
     if arch_string == "Array_Asap3"
-        return asap3(2, KCStandard)
+        return asap3(2, KC{true,false})
     elseif arch_string == "Array_Asap4"
-        return asap4(2, KCStandard)
+        return asap4(2, KC{true,false})
     else
         error("Unrecognized Architecture: $arch_string")
     end

@@ -57,10 +57,7 @@ abstract type MapConstructor end
 # Custom Architecture used by this Framework
 ################################################################################
 
-abstract type AbstractKC <: AbstractArchitecture end
-
-struct KCNoWeight <: AbstractKC end
-struct KCStandard <: AbstractKC end
+struct KC{EdgeWeight,Freq} <: AbstractArchitecture end
 
 include("Helper.jl")
 
@@ -70,7 +67,7 @@ include("experimental_models/experimental_models.jl")
 #include("models/models.jl")
 
 # Include files
-include("PMConstructor.jl")
+include("PM_Interface.jl")
 include("Mapper2_Interface.jl")
 
 # For communication with the project manager

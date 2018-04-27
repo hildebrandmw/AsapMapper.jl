@@ -19,35 +19,33 @@ Specifically:
 
 const TN = TaskgraphNode
 const TE = TaskgraphEdge
-const AKC = AbstractKC
 
-
-function Mapper2.ismappable(::Type{T}, c::Component) where {T <: AKC}
+function Mapper2.ismappable(::Type{<:KC}, c::Component)
     return haskey(c.metadata, "attributes") && length(c.metadata["attributes"]) > 0
 end
 
-function Mapper2.isspecial(::Type{T}, t::TN) where {T <: AKC}
+function Mapper2.isspecial(::Type{<:KC}, t::TN)
     return in(t.metadata["mapper_type"], _special_attributes)
 end
 
-function Mapper2.isequivalent(::Type{T}, a::TN, b::TN) where {T <: AKC}
+function Mapper2.isequivalent(::Type{<:KC}, a::TN, b::TN)
     # Return true if the "mapper_type" are equal
     return a.metadata["mapper_type"] == b.metadata["mapper_type"]
 end
 
-function Mapper2.canmap(::Type{T}, t::TN, c::Component) where {T <: AKC}
+function Mapper2.canmap(::Type{<:KC}, t::TN, c::Component)
     haskey(c.metadata, "attributes") || return false
     return in(t.metadata["mapper_type"], c.metadata["attributes"])
 end
 
-function Mapper2.is_source_port(::Type{T}, p::Port, e::TE) where {T <: AKC}
+function Mapper2.is_source_port(::Type{<:KC}, p::Port, e::TE)
     port_link_class = p.metadata["link_class"]
     edge_link_class = e.metadata["link_class"]
     
     return port_link_class == edge_link_class
 end
 
-function Mapper2.is_sink_port(::Type{T}, p::Port, e::TE) where {T <: AKC}
+function Mapper2.is_sink_port(::Type{<:KC}, p::Port, e::TE)
     port_link_class = p.metadata["link_class"]
     edge_link_class = e.metadata["link_class"]
 
@@ -62,13 +60,20 @@ end
 ################################################################################
 # Placement
 ################################################################################
+struct FreqNode{T} <: Mapper2.SA.Node
+    location    ::T
+    out_edges   ::Vector{Int64}
+    in_edges    ::Vector{Int64}
+    # Normalized Frequency
+    norm_freq   ::Float64
+end
 struct CostEdge <: Mapper2.SA.TwoChannel
     source ::Int64
     sink   ::Int64
     cost   ::Float64
 end
 
-function Mapper2.SA.build_channels(::Type{KCStandard}, edges, sources, sinks)
+function Mapper2.SA.build_channels(::Type{<:KC{true}}, edges, sources, sinks)
     return map(zip(edges, sources, sinks)) do x
         edge,srcs,snks = x
         @assert length(srcs) == 1
@@ -81,7 +86,7 @@ function Mapper2.SA.build_channels(::Type{KCStandard}, edges, sources, sinks)
 end
 
 # Costed metric functions
-function Mapper2.SA.edge_cost(::Type{KCStandard}, sa::SAStruct, edge::CostEdge)
+function Mapper2.SA.edge_cost(::Type{<:KC{true}}, sa::SAStruct, edge::CostEdge)
     src = getaddress(sa.nodes[edge.source])
     dst = getaddress(sa.nodes[edge.sink])
     return  edge.cost * sa.distance[src, dst]
@@ -100,7 +105,7 @@ end
 
 Base.isless(a::CostChannel, b::CostChannel) = a.cost < b.cost
 
-function Mapper2.routing_channel(::Type{KCStandard}, start, stop, edge)
+function Mapper2.routing_channel(::Type{<:KC{true}}, start, stop, edge)
     cost = edge.metadata["cost"]
     return CostChannel(start, stop, cost)
 end
