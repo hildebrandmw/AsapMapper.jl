@@ -103,6 +103,18 @@ function Mapper2.SA.edge_cost(::Type{<:KC{true}}, sa::SAStruct, edge::CostEdge)
     return  edge.cost * sa.distance[src, dst]
 end
 
+function Mapper2.SA.address_cost(::Type{<:KC{T,true}}, sa::SAStruct, node::SA.Node) where T
+    # Get the frequency bin for the location of the node.
+    component_bin = sa.address_data[SA.location(node)]
+    if component_bin > node.freq_bin
+        # It's expected that the attached "aux" will be some float describing 
+        # the weight to assign to the core-specific frequency objective.
+        return sa.aux * (component_bin - node.freq_bin)
+    else
+        return 0.0
+    end
+end
+
 ################################################################################
 # Routing
 ################################################################################

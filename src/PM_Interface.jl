@@ -97,14 +97,15 @@ const _default_options = Dict(
     :weight_links => true,
     # Set to "true" to include frequency as a criteria for mapping.
     :use_frequency => false,
+    :frequency_penalty_start => 10.0,
     # If these options are left as "nothing", will pull frequency information
     # out of the Project Manager input file. Otherwise, if they are a 
     # "FunctionCall" to a synthetic generation function, that function will be
     # used to to generate frequency data.
     :task_freq_source   => t::Taskgraph -> generate_task_frequencies(t),
-    :task_freq_bin      => t::Taskgraph -> bin_task_frequencies(t),
-    :proc_freq_source   => x::TopLevel -> nothing,
-    :proc_freq_bin      => x::TopLevel -> bin_arch_frequencies(x),
+    :task_freq_bin      => t::Taskgraph -> bin_task_frequencies(t, 5),
+    :proc_freq_source   => x::TopLevel -> generate_arch_frequencies(x),
+    :proc_freq_bin      => x::TopLevel -> bin_arch_frequencies(x, 5),
   )
 
 function Base.parse(c::PMConstructor)
@@ -164,7 +165,39 @@ function build_map(c::PMConstructor)
     name_mappables(a, json_dict)
     compute_frequencies(a, json_dict)
 
-    return NewMap(a, t)
+    # build the map and attach the options dictionary to it.
+    m = NewMap(a,t)
+    m.options = json_dict[_options_path_]
+
+    return m
+end
+
+function asap_pnr(m::Map)
+    if m.options[:use_frequency]
+        aux = m.options[:frequency_penalty_start] 
+        while true
+            m = place(m, enable_address = true, aux = aux)
+            success = true
+            # Sometimes, routing will fail if memory processors are not located
+            # next to their respective memories. This try-catch block makes sure
+            # the whole routine doesn't break if this happens.
+            try
+                m = route(m)
+            catch
+                success = false
+            end
+            if success && check_routing(m)
+                break
+            else
+                aux = aux / 2
+                @info "Routing Failed. Trying aux = $(aux)"
+            end
+        end
+    else
+        m = place(m)
+        m = route(m)
+    end
+    return m
 end
 
 #-------------------------------------------------------------------------------
@@ -399,14 +432,28 @@ end
 function generate_task_frequencies(t::Taskgraph)
     @debug "Generating Task Frequencies"
     for task in getnodes(t)
-        task.metadata["frequency"] = rand(1:10)
+        task.metadata["frequency"] = randn()
     end
 end
 
-function bin_task_frequencies(t::Taskgraph)
+function bin_task_frequencies(t::Taskgraph, nbins::Int)
     @debug "Binning Task Frequencies"
+    # Step 1: Collect the range of frequencies to determine the size of each bin.
+    frequencies = [task.metadata["frequency"] for task in getnodes(t)]
+    fmin, fmax = extrema(frequencies)
+    binsize = (fmax - fmin) / nbins
+
+    # Step 2: Assign bins to each task. Fastest frequency requirement 
+    # (highest bin) will get the lowest bin.
     for task in getnodes(t)
-        task.metadata["frequency_bin"] = 1.0
+        task_freq = task.metadata["frequency"]
+        # Quick check to put the max frequency into bin 1.0
+        if task_freq == fmax
+            bin = 1.0
+        else
+            bin = ceil( (fmax - task_freq) / binsize )
+        end
+        task.metadata["frequency_bin"] = bin
     end
 end
 
@@ -484,13 +531,31 @@ function compute_frequencies(a::TopLevel, json_dict)
     options[:proc_freq_bin](a)
 end
 
-function bin_arch_frequencies(a::TopLevel)
-    # For now, just assign 1.0 to everything.
-    f(path) = search_metadata(a[path], "max_frequency")
+# Synthetic generator for architecture frequencies.
+function generate_arch_frequencies(a::TopLevel)
+    f(path) = search_metadata(a[path], "attributes")
     paths = filter(f, walk_children(a))
 
     for path in paths
-        component = a[path]
-        component.metadata["frequency_bin"] = 1.0
+        a[path].metadata["max_frequency"] = randn()
+    end
+end
+
+function bin_arch_frequencies(a::TopLevel, nbins::Int)
+    f(path) = search_metadata(a[path], "attributes")
+    paths = filter(f, walk_children(a))
+    
+    frequencies = [a[path].metadata["max_frequency"] for path in paths]
+    fmin, fmax = extrema(frequencies)
+    binsize = (fmax - fmin) / nbins
+
+    for path in paths
+        core_freq = a[path].metadata["max_frequency"]
+        if core_freq == fmax
+            bin = 1.0
+        else
+            bin = ceil( (fmax - core_freq) / binsize )
+        end
+        a[path].metadata["frequency_bin"] = bin
     end
 end

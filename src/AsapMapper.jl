@@ -19,6 +19,7 @@ set_logging(level) = configure_logging(AsapMapper, min_level=level)
 
 export  place_and_route,
         testmap,
+        asap_place,
         place,
         route,
         set_logging,
@@ -96,10 +97,13 @@ function testmap()
     # a = generic(16,16,4,12, KCStandard)
 
     # Build taskgraph - look in "apps" directory
-    path = joinpath(PKGDIR, "apps", "mapper_in_16.json")
+    path = joinpath(PKGDIR, "apps", "mapper_in_4.json")
     options = Dict(
-        :use_frequency => true,
-    #    :architecture => FunctionCall(asap3, (2, KC{true,false})),
+        #:use_frequency => true,
+        #:frequency_penalty_start => 50.0,
+        #:num_links => 3,
+        #:architecture => FunctionCall(asap3, (2, KC{true,true})),
+        #:architecture => FunctionCall(asap3, (2, KC{true,false})),
     )
     return build_map(PMConstructor(path, options))
 end
@@ -129,15 +133,5 @@ function place_and_route(profile_path, dump_path)
     # Dump mapping to given dump path
     dump_map(m, dump_path)
 end
-
-################################################################################
-# Custom loader
-################################################################################
-function load_saved_taskgraph(path)
-    c = PMConstructor(joinpath(APPS, "$path.json"))
-    return build_taskgraph(c)
-end
-
-
 
 end # module
