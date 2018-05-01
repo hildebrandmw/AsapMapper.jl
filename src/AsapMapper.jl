@@ -14,10 +14,14 @@ const PKGDIR = dirname(SRCDIR)
 const RESULTS = joinpath(PKGDIR, "results")
 const APPS    = joinpath(PKGDIR, "apps")
 
+set_logging(level) = configure_logging(AsapMapper, min_level=level)
+
+
 export  place_and_route,
         testmap,
         place,
         route,
+        set_logging,
         # Taskgraph constructors
         load_taskgraph,
         # Architecture constructors
@@ -93,11 +97,11 @@ function testmap()
 
     # Build taskgraph - look in "apps" directory
     path = joinpath(PKGDIR, "apps", "mapper_in_16.json")
-    return build_map(PMConstructor(path))
-    t = build_taskgraph(PMConstructor(path))
-
-    # Construct a "Map" from the architecture and taskgraph.
-    return NewMap(a, t)
+    options = Dict(
+        :use_frequency => true,
+    #    :architecture => FunctionCall(asap3, (2, KC{true,false})),
+    )
+    return build_map(PMConstructor(path, options))
 end
 
 ################################################################################

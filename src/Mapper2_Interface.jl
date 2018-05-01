@@ -60,17 +60,28 @@ end
 ################################################################################
 # Placement
 ################################################################################
-struct FreqNode{T} <: Mapper2.SA.Node
+mutable struct FreqNode{T} <: Mapper2.SA.Node
     location    ::T
     out_edges   ::Vector{Int64}
     in_edges    ::Vector{Int64}
     # Normalized Frequency
-    norm_freq   ::Float64
+    freq_bin    ::Float64
 end
+
 struct CostEdge <: Mapper2.SA.TwoChannel
     source ::Int64
     sink   ::Int64
     cost   ::Float64
+end
+
+function Mapper2.SA.build_node(::Type{<:KC{T,true}}, n::TaskgraphNode, x) where T
+    freq_bin = n.metadata["frequency_bin"]
+    return FreqNode(x, Int64[], Int64[], freq_bin)
+end
+
+function Mapper2.SA.build_address_data(::Type{<:KC{T,true}}, c::Component) where T
+    freq_bin = c.metadata["frequency_bin"]
+    return freq_bin
 end
 
 function Mapper2.SA.build_channels(::Type{<:KC{true}}, edges, sources, sinks)
