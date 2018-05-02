@@ -139,7 +139,7 @@ function getlines(m::Map{A,2}, spacing, tilesize) where A
 
         for path in (start, stop)
             # Get the address from the path.
-            address = getaddress(path)
+            address = getaddress(a, path)
             # Create offsets for smooth paths
 
             # Big offset for macro location in the whole array

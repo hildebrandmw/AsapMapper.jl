@@ -12,6 +12,13 @@ function Base.getindex(d::Dict, k::KeyChain)
     return d
 end
 
+function Base.setindex!(d::Dict, x, k::KeyChain)
+    for i in 1:length(k.keys)-1
+        d = d[i]
+    end
+    d[endof(k.keys)] = x
+end
+
 ################################################################################
 
 type_sanitize(::Type{T}, v::T) where T = v
