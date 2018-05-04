@@ -84,20 +84,14 @@ include("experiments/Experiments.jl")
 
 include("Plots.jl")
 
+
 ################################################################################
 # Useful for testing and debugging
 ################################################################################
 
 function testmap()
-
-    # Build architecture
-    # a = asap_cluster(2, KCStandard)
-    # a = asap4(2, KCStandard)
-    # a = asap3(2, KCStandard)
-    # a = generic(16,16,4,12, KCStandard)
-
     # Build taskgraph - look in "apps" directory
-    path = joinpath(PKGDIR, "apps", "mapper_in_4.json")
+    path = joinpath(PKGDIR, "apps", "mapper_in_7.json")
     options = Dict(
         #:use_frequency => true,
         #:frequency_penalty_start => 50.0,

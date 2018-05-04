@@ -94,7 +94,7 @@ const _default_options = Dict(
     # ---------------
     # Set to "true" to assign weights to inter-task communication links
     # according to the normalized number of writes on that link.
-    :weight_links => true,
+    :weight_links => false,
     # Set to "true" to include frequency as a criteria for mapping.
     :use_frequency => false,
     :frequency_penalty_start => 10.0,
@@ -326,7 +326,9 @@ function parse_input(t::Taskgraph, tasklist)
                       "dest_index"      => dest_index,
                      )
 
-                metadata = merge(basic_metadata, link_def["measurements_dict"])
+                measurements = Dict("measurements_dict" => link_def["measurements_dict"])
+
+                metadata = merge(basic_metadata, measurements)
                 new_edge = TaskgraphEdge(source_task, dest_task, metadata)
                 add_edge(t, new_edge)
             end
@@ -406,14 +408,46 @@ end
 function apply_link_weights(t::Taskgraph, options::Dict)
     options[:weight_links] || (return t)
 
-    # For now, just assign unit weights.
+    # Iterate through each edge to get the average number of writes for an edge.
+    # Edges with missing measurement dicts will be skipped.
+    edge_count = 0
+    total_writes = 0
     for edge in getedges(t)
-        if edge.metadata["pm_class"] in ("Memory_Request_Link", "Memory_Response_Link")
-            edge.metadata["cost"] = 5.0
-        else
-            edge.metadata["cost"] = 1.0
+        measurements = edge.metadata["measurements_dict"]
+        if haskey(measurements, "num_writes")
+            edge_count += 1 
+            total_writes += measurements["num_writes"]
         end
     end
+
+    average_writes = total_writes / edge_count
+
+    @debug """
+        Average Writes: $average_writes
+        Edge Count: $edge_count
+    """
+    # Assign weight to each edge based on the number of writes compared with
+    # the average.
+    for edge in getedges(t)
+        measurements = edge.metadata["measurements_dict"]
+        # Since memory processors must be located directly next to their 
+        # respective memories, assign a high cost to memory links.
+        if edge.metadata["pm_class"] in ("Memory_Request_Link", "Memory_Response_Link")
+            edge.metadata["cost"] = 5.0
+        elseif !haskey(measurements, "num_writes")
+            edge.metadata["cost"] = 1.0
+        else
+            num_writes = measurements["num_writes"]
+            ndigits = 2
+            # Round to 2 binary digits. Make sure nothing has a weight of 0
+            cost = max(
+                       round(num_writes / average_writes, ndigits, 2), 
+                       2.0 ^ (-ndigits)
+                      )
+            edge.metadata["cost"] = cost
+        end
+    end
+
     return t
 end
 

@@ -79,6 +79,7 @@ function Mapper2.SA.build_node(::Type{<:KC{T,true}}, n::TaskgraphNode, x) where 
     return FreqNode(x, Int64[], Int64[], freq_bin)
 end
 
+
 function Mapper2.SA.build_address_data(::Type{<:KC{T,true}}, c::Component) where T
     freq_bin = c.metadata["frequency_bin"]
     return freq_bin
