@@ -97,14 +97,14 @@ const _default_options = Dict(
     :weight_links => false,
     # Set to "true" to include frequency as a criteria for mapping.
     :use_frequency => false,
-    :frequency_penalty_start => 10.0,
+    :frequency_penalty_start => 50.0,
     # If these options are left as "nothing", will pull frequency information
     # out of the Project Manager input file. Otherwise, if they are a 
     # "FunctionCall" to a synthetic generation function, that function will be
     # used to to generate frequency data.
-    :task_freq_source   => t::Taskgraph -> generate_task_frequencies(t),
+    :task_freq_source   => t::Taskgraph -> read_task_frequencies(t),
     :task_freq_bin      => t::Taskgraph -> bin_task_frequencies(t, 5),
-    :proc_freq_source   => x::TopLevel -> generate_arch_frequencies(x),
+    :proc_freq_source   => x::TopLevel -> nothing,
     :proc_freq_bin      => x::TopLevel -> bin_arch_frequencies(x, 5),
   )
 
@@ -240,7 +240,7 @@ end
 #-------------------------------------------------------------------------------
 
 const _pm_task_required = ("type",)
-const _pm_task_optional = ("Get_Workload()",)
+const _pm_task_optional = ("measurements_dict",)
 const _pm_edge_required = ("source_task","source_port","dest_task","dest_port")
 const _pm_edge_optional = ("measurements_dict",)
 
@@ -463,6 +463,17 @@ function interpret_frequency(t::Taskgraph, options::Dict)
     return t
 end
 
+function read_task_frequencies(t::Taskgraph)
+    for task in getnodes(t)
+        measurements = task.metadata["measurements_dict"]
+        if haskey(measurements, "Get_Utilization_Adj()")
+            task.metadata["frequency"] = measurements["Get_Utilization_Adj()"]
+        else
+            task.metadata["frequency"] = 1.0
+        end
+    end
+end
+
 function generate_task_frequencies(t::Taskgraph)
     @debug "Generating Task Frequencies"
     for task in getnodes(t)
@@ -576,13 +587,29 @@ function generate_arch_frequencies(a::TopLevel)
 end
 
 function bin_arch_frequencies(a::TopLevel, nbins::Int)
-    f(path) = search_metadata(a[path], "attributes")
+    children = walk_children(a)
+    # First, handle input/output handlers
+    g(x) = search_metadata(a[x], "attributes", ("input_handler", "output_handler"), oneofin)
+    iopaths = filter(g, children)
+    for path in iopaths
+        a[path].metadata["frequency_bin"] = 1.0
+    end
+
+    # Now handle processors and memories
+    f(x) = search_metadata(a[x], "attributes", ("processor", "memory_1port"), oneofin)
     paths = filter(f, walk_children(a))
     
     frequencies = [a[path].metadata["max_frequency"] for path in paths]
     fmin, fmax = extrema(frequencies)
     binsize = (fmax - fmin) / nbins
 
+    @debug """
+    fmin: $fmin
+    fmax: $fmax
+    binsize: $binsize
+    """
+
+    bins = Float64[]
     for path in paths
         core_freq = a[path].metadata["max_frequency"]
         if core_freq == fmax
@@ -591,5 +618,8 @@ function bin_arch_frequencies(a::TopLevel, nbins::Int)
             bin = ceil( (fmax - core_freq) / binsize )
         end
         a[path].metadata["frequency_bin"] = bin
+        push!(bins, bin)
     end
+
+    @debug "Bins: $bins"
 end

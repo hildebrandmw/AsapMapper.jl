@@ -121,9 +121,8 @@ function place_and_route(profile_path, dump_path)
     # Initialize an uncompressed taskgraph constructor
     c = PMConstructor(profile_path)
     m = build_map(c)
-    # Run pnr, do 3 retries.
-    num_retries = 3
-    lowtemp_pnr(m, num_retries)
+    # Run place-and-route
+    m = asap_pnr(m)
     # Dump mapping to given dump path
     dump_map(m, dump_path)
 end
