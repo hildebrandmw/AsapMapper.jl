@@ -11,3 +11,4 @@ include("components.jl")
 # Array layouts
 include("asap3.jl")
 include("asap4.jl")
+include("build_model.jl")
