@@ -126,10 +126,13 @@ function populate_routes!(jsn,m)
     return nothing
 end
 
-function extract_routings(m)
+function extract_routings(m::Map{A}) where A
     arch = m.architecture
     routings = Dict{RoutingTuple,Any}()
     for (edge, graph) in zip(m.taskgraph.edges, m.mapping.edges)
+        # Skip un-routed edges.
+        needsrouting(A, edge) || continue
+
         # Build the route tuple
         source_task = first(getsources(edge)) 
         dest_task   = first(getsinks(edge))

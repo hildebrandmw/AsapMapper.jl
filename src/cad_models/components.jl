@@ -207,8 +207,8 @@ end
 ################################################################################
 function connect_processors(tl, num_links)
 
-    vals = ["processor", "input_handler", "output_handler"]
-    fn = x -> search_metadata!(x, "attributes", vals, oneofin)
+    vals = [MTypes.proc, MTypes.input, MTypes.output]
+    fn = x -> search_metadata!(x, typekey(), vals, oneofin)
     src_rule = fn
     dst_rule = fn
 
@@ -246,8 +246,8 @@ end
 
 function connect_io(tl, num_links)
 
-    vals = ["processor", "input_handler", "output_handler"]
-    fn = x -> search_metadata!(x, "attributes", vals, oneofin)
+    vals = [MTypes.proc, MTypes.input, MTypes.output]
+    fn = x -> search_metadata!(x, typekey(), vals, oneofin)
     src_rule = fn
     dst_rule = fn
 
@@ -298,8 +298,8 @@ function connect_memories(tl)
     # Connect 2 port memories #
     ########################### 
 
-    proc_rule = x -> search_metadata!(x, "attributes", "memory_processor", in)
-    mem2_rule  = x -> search_metadata!(x, "attributes", "memory_2port", in)
+    proc_rule = x -> search_metadata!(x, typekey(), MTypes.memoryproc, in)
+    mem2_rule  = x -> search_metadata!(x, typekey(), MTypes.memory(2), in)
 
 
     offset_rules = [
@@ -318,7 +318,7 @@ function connect_memories(tl)
     ########################### 
     # Connect 1 port memories #
     ########################### 
-    mem1_rule = x -> search_metadata!(x, "attributes", "memory_1port", in)
+    mem1_rule = x -> search_metadata!(x, typekey(), MTypes.memory(1), in)
 
     offset_rule = [(CartesianIndex(-1,0), "out[0]", "memory_in")]
     connection_rule(tl, offset_rule, mem1_rule, proc_rule, metadata = request_metadata)

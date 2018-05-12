@@ -129,16 +129,16 @@ end
 function getlines(m::Map{A,2}, spacing, tilesize) where A
     a = m.architecture
     lines = DrawRoute[]
-    for graph in m.mapping.edges
+    for edge in getedges(m.taskgraph)
+
         x = Float64[]
         y = Float64[]
-        path = linearize(graph)
+        source = first(getsources(edge))
+        dest   = first(getsinks(edge))
 
-        start = first(path)
-        stop = last(path)
-
-        for path in (start, stop)
+        for node in (source, dest)
             # Get the address from the path.
+            path = Mapper2.MapperCore.getpath(m.mapping, node)
             address = getaddress(a, path)
             # Create offsets for smooth paths
 

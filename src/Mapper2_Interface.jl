@@ -21,21 +21,21 @@ const TN = TaskgraphNode
 const TE = TaskgraphEdge
 
 function Mapper2.ismappable(::Type{<:KC}, c::Component)
-    return haskey(c.metadata, "attributes") && length(c.metadata["attributes"]) > 0
+    return haskey(c.metadata, typekey()) && length(c.metadata[typekey()]) > 0
 end
 
 function Mapper2.isspecial(::Type{<:KC}, t::TN)
-    return in(t.metadata["mapper_type"], _special_attributes)
+    return in(t.metadata[typekey()], _special_attributes)
 end
 
 function Mapper2.isequivalent(::Type{<:KC}, a::TN, b::TN)
     # Return true if the "mapper_type" are equal
-    return a.metadata["mapper_type"] == b.metadata["mapper_type"]
+    return a.metadata[typekey()] == b.metadata[typekey()]
 end
 
 function Mapper2.canmap(::Type{<:KC}, t::TN, c::Component)
-    haskey(c.metadata, "attributes") || return false
-    return in(t.metadata["mapper_type"], c.metadata["attributes"])
+    haskey(c.metadata, typekey()) || return false
+    return in(t.metadata[typekey()], c.metadata[typekey()])
 end
 
 function Mapper2.is_source_port(::Type{<:KC}, p::Port, e::TE)
@@ -57,6 +57,10 @@ function Mapper2.is_sink_port(::Type{<:KC}, p::Port, e::TE)
     return port_link_class == edge_link_class
 end
 
+function Mapper2.needsrouting(::Type{<:KC}, edge::TaskgraphEdge)
+    return edge.metadata["route_link"]
+end
+
 ################################################################################
 # Placement
 ################################################################################
@@ -75,13 +79,13 @@ struct CostEdge <: Mapper2.SA.TwoChannel
 end
 
 function Mapper2.SA.build_node(::Type{<:KC{T,true}}, n::TaskgraphNode, x) where T
-    freq_bin = n.metadata["frequency_bin"]
+    freq_bin = n.metadata["bin"]
     return FreqNode(x, Int64[], Int64[], freq_bin)
 end
 
 
 function Mapper2.SA.build_address_data(::Type{<:KC{T,true}}, c::Component) where T
-    freq_bin = c.metadata["frequency_bin"]
+    freq_bin = c.metadata["bin"]
     return freq_bin
 end
 
@@ -122,9 +126,9 @@ end
 
 # Custom Channels
 struct CostChannel <: AbstractRoutingChannel
-    start   ::Vector{Vector{Int64}}
-    stop    ::Vector{Vector{Int64}}
-    cost    ::Float64
+    start_vertices   ::Vector{Vector{Int64}}
+    stop_vertices    ::Vector{Vector{Int64}}
+    cost             ::Float64
 end
 
 Base.isless(a::CostChannel, b::CostChannel) = a.cost < b.cost

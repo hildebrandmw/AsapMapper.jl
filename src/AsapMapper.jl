@@ -5,7 +5,7 @@ const is07 = VERSION > v"0.7.0-"
 using Mapper2
 using IterTools, JSON, GZip
 is07 ? (using Logging) : (using MicroLogging)
-using Missings
+using NamedTuples
 using Compat
 
 # Set up directory paths
@@ -15,7 +15,6 @@ const RESULTS = joinpath(PKGDIR, "results")
 const APPS    = joinpath(PKGDIR, "apps")
 
 set_logging(level) = configure_logging(AsapMapper, min_level=level)
-
 
 export  place_and_route,
         testmap,
@@ -65,6 +64,7 @@ abstract type MapConstructor end
 struct KC{EdgeWeight,Freq} <: AbstractArchitecture end
 
 include("Helper.jl")
+include("Metadata.jl")
 
 # Architectures
 include("cad_models/cad_models.jl")
@@ -83,7 +83,6 @@ include("PNR.jl")
 include("experiments/Experiments.jl")
 
 #include("Plots.jl")
-
 
 ################################################################################
 # Useful for testing and debugging

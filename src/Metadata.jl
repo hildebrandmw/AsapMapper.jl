@@ -26,40 +26,79 @@ const _special_attributes = Set([
       "memory_2port",
     ])
 
+# Function to unify mapper types cleanly between tasks and cores.
+memory_meta(ports::Int) = "memory_$(ports)port"
+ismemory(s::String) = startswith(s, "memory")
+ismemory(x) = false
 
-function proc_metadata() 
-    return Dict{String,Any}(
-        "attributes" => ["processor"],
-    )
+# Global NT for dealing with attributes.
+const MTypes = @NT(
+    proc        = "processor",
+    memoryproc  = "memory_processor",
+    input       = "input_handler",
+    output      = "output_handler",
+    memory      = memory_meta,
+)
+
+typekey() = "mapper_type"
+
+isproc(c::Component)        = in(MTypes.proc, c.metadata[typekey()])
+ismemoryproc(c::Component)  = in(MTypes.memoryproc, c.metadata[typekey()])
+isinput(c::Component)       = in(MTypes.input, c.metadata[typekey()])
+isoutput(c::Component)      = in(MTypes.output, c.metadata[typekey()])
+function ismemory(c::Component)
+    for i in c.metadata[typekey()]
+        if ismemory(i)
+            return true
+        end
+    end
+    return false
 end
 
-function mem_proc_metadata() 
-    return Dict{String,Any}(
-        "attributes" => ["processor", "memory_processor"],
-    )
-end
+################################################################################
+# Assignment of metadata to Components.
+################################################################################
+proc_metadata() = Dict{String,Any}(typekey() => [MTypes.proc])
+mem_proc_metadata() = Dict{String,Any}(typekey() => [MTypes.proc, MTypes.memoryproc])
 
 function mem_nport_metadata(nports::Int)
-    attrs = ["memory_$(i)port" for i in 1:nports]
+    attrs = [MTypes.memory(i) for i in 1:nports]
     return Dict{String,Any}(
-        "attributes" => attrs,
+        typekey() => attrs,
         # Options for plotting
         "shadow_offset" => [Address(0,i) for i in 1:nports-1],
         "fill"          => "memory"
     )
 end
 
-function input_handler_metadata()
-    return Dict{String,Any}(
-        "attributes" => ["input_handler"],
-    )
-end
+input_handler_metadata() = Dict{String,Any}(typekey() => [MTypes.input])
+output_handler_metadata() = Dict{String,Any}(typekey() => [MTypes.output])
 
-function output_handler_metadata()
-    return Dict{String,Any}(
-        "attributes" => ["output_handler"],
-    )
-end
+################################################################################
+# Metadata for Taskgraph Nodes
+################################################################################
+
+const TN = TaskgraphNode
+# Setting task -> core requirements.
+make_input!(t::TN)       = (t.metadata[typekey()] = MTypes.input)
+make_output!(t::TN)      = (t.metadata[typekey()] = MTypes.output)
+make_proc!(t::TN)        = (t.metadata[typekey()] = MTypes.proc)
+make_memoryproc!(t::TN)  = (t.metadata[typekey()] = MTypes.memoryproc)
+make_memory!(t::TN, ports::Integer) = t.metadata[typekey()] = MTypes.memory(ports)
+
+# Getting task -> core requirements.
+isinput(t::TN)      = t.metadata[typekey()] == MTypes.input
+isoutput(t::TN)     = t.metadata[typekey()] == MTypes.output
+isproc(t::TN)       = t.metadata[typekey()] == MTypes.proc
+ismemoryproc(t::TN) = t.metadata[typekey()] == MTypes.memoryproc
+ismemory(t::TN)     = ismemory(t.metadata[typekey()])
+
+# Setting task -> core preference.
+setmetric!(t::TN, val) = t.metadata["task_metric"] = val
+setbin!(t::TN, val) = t.metadata["bin"] = val
+
+getmetric(t::TN) = t.metadata["task_metric"]
+getbin(t::TN) = t.metadata["bin"]
 
 ################################################################################
 # Routing Resources
