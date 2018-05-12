@@ -485,18 +485,23 @@ function apply_link_weights(t::Taskgraph, options::Dict)
     # to each memory link.
     weight_links = options[:weight_links]
 
-    # Iterate through each edge to get the average number of writes for an edge.
-    # Edges with missing measurement dicts will be skipped.
-    edge_writes = Int64[]
+    # Determine the maximium and minimum number of writes over the entire 
+    # colletion of edges. Do this in a single pass through the input 
+    # dictionary as this will work correctly even if the "num_writes" field
+    # of the measurements dict is not available.
+    min_writes = typemax(Int64)
+    max_writes = typemin(Int64)
     for edge in getedges(t)
         measurements = edge.metadata["measurements_dict"]
         source_task = getnode(t, first(getsources(edge)))
         if haskey(measurements, "num_writes") && !isinput(source_task)
-            push!(edge_writes, measurements["num_writes"])
+            num_writes = measurements["num_writes"]
+            # Keep track of minimum and maximum number of writes.
+            min_writes = min(min_writes, num_writes)
+            max_writes = max(max_writes, num_writes)
         end
     end
 
-    min_writes, max_writes = extrema(edge_writes)
     range = max_writes - min_writes
 
     @debug """
