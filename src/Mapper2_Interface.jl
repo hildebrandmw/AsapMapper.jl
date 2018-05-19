@@ -68,8 +68,9 @@ mutable struct FreqNode{T} <: Mapper2.SA.Node
     location    ::T
     out_edges   ::Vector{Int64}
     in_edges    ::Vector{Int64}
-    # Normalized Frequency
-    freq_bin    ::Float64
+    # Normalized rank and derivative
+    rank        ::Float64
+    derivative  ::Float64
 end
 
 struct CostEdge <: Mapper2.SA.TwoChannel
@@ -79,14 +80,25 @@ struct CostEdge <: Mapper2.SA.TwoChannel
 end
 
 function Mapper2.SA.build_node(::Type{<:KC{T,true}}, n::TaskgraphNode, x) where T
-    freq_bin = n.metadata["bin"]
-    return FreqNode(x, Int64[], Int64[], freq_bin)
+    taskrank = getrank(n) 
+    if ismissing(taskrank.quartile_normalized_rank)
+        rank = taskrank.normalized_rank
+    else
+        rank = taskrank.quartile_normalized_rank
+    end
+    derivative = taskrank.normalized_derivative
+    return FreqNode(x, Int64[], Int64[], rank, derivative)
 end
 
 
 function Mapper2.SA.build_address_data(::Type{<:KC{T,true}}, c::Component) where T
-    freq_bin = c.metadata["bin"]
-    return freq_bin
+    corerank = getrank(c)
+    if ismissing(corerank.quartile_normalized_rank)
+        rank = corerank.normalized_rank
+    else
+        rank = corerank.quartile_normalized_rank
+    end
+    return rank
 end
 
 function Mapper2.SA.build_channels(::Type{<:KC{true}}, edges, sources, sinks)
@@ -110,11 +122,11 @@ end
 
 function Mapper2.SA.address_cost(::Type{<:KC{T,true}}, sa::SAStruct, node::SA.Node) where T
     # Get the frequency bin for the location of the node.
-    component_bin = sa.address_data[SA.location(node)]
-    if component_bin > node.freq_bin
+    component_rank = sa.address_data[SA.location(node)]
+    if component_rank < node.rank
         # It's expected that the attached "aux" will be some float describing 
         # the weight to assign to the core-specific frequency objective.
-        return sa.aux * (component_bin - node.freq_bin)
+        return sa.aux * node.derivative * (node.rank - component_rank)
     else
         return 0.0
     end

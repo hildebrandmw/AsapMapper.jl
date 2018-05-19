@@ -42,11 +42,12 @@ const MTypes = @NT(
 
 typekey() = "mapper_type"
 
-isproc(c::Component)        = in(MTypes.proc, c.metadata[typekey()])
-ismemoryproc(c::Component)  = in(MTypes.memoryproc, c.metadata[typekey()])
-isinput(c::Component)       = in(MTypes.input, c.metadata[typekey()])
-isoutput(c::Component)      = in(MTypes.output, c.metadata[typekey()])
-function ismemory(c::Component)
+isproc(c::AbstractComponent)        = haskey(c.metadata, typekey()) && in(MTypes.proc, c.metadata[typekey()])
+ismemoryproc(c::AbstractComponent)  = haskey(c.metadata, typekey()) && in(MTypes.memoryproc, c.metadata[typekey()])
+isinput(c::AbstractComponent)       = haskey(c.metadata, typekey()) && in(MTypes.input, c.metadata[typekey()])
+isoutput(c::AbstractComponent)      = haskey(c.metadata, typekey()) && in(MTypes.output, c.metadata[typekey()])
+function ismemory(c::AbstractComponent)
+    haskey(c.metadata, typekey()) || return false
     for i in c.metadata[typekey()]
         if ismemory(i)
             return true
@@ -94,11 +95,27 @@ ismemoryproc(t::TN) = t.metadata[typekey()] == MTypes.memoryproc
 ismemory(t::TN)     = ismemory(t.metadata[typekey()])
 
 # Setting task -> core preference.
-setmetric!(t::TN, val) = t.metadata["task_metric"] = val
-setbin!(t::TN, val) = t.metadata["bin"] = val
+mutable struct TaskRank
+    # Ranks
+    rank                    ::Union{Float64,Missing}
+    normalized_rank         ::Float64
+    quartile_normalized_rank::Union{Float64,Missing}
+    # Derivatives
+    derivative            ::Union{Float64,Missing}
+    normalized_derivative ::Float64
+end
+TaskRank(rank, derivative) = TaskRank(rank, 0, missing, derivative, 0)
 
-getmetric(t::TN) = t.metadata["task_metric"]
-getbin(t::TN) = t.metadata["bin"]
+mutable struct CoreRank
+    rank                    ::Union{Float64,Missing}
+    normalized_rank         ::Float64
+    quartile_normalized_rank::Union{Float64,Missing}
+end
+CoreRank(rank) = CoreRank(rank, 0, missing)
+
+# Make these generic so they work on Components and TaskgraphNodes.
+getrank(t) = t.metadata["rank"]
+setrank!(t, val) = t.metadata["rank"] = val
 
 ################################################################################
 # Routing Resources

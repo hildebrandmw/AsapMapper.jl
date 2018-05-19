@@ -4,6 +4,7 @@ const is07 = VERSION > v"0.7.0-"
 
 using Mapper2
 using IterTools, JSON, GZip
+using Missings
 is07 ? (using Logging) : (using MicroLogging)
 using NamedTuples
 using Compat

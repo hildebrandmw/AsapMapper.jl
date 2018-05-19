@@ -81,7 +81,7 @@ end
 
 # Central list of options that are expected from the project manager input
 # file or are to be over-ridden by local options.
-function _get_default_options() 
+function _get_default_options()
     return Dict(
         # General Options
         # ---------------
@@ -90,7 +90,7 @@ function _get_default_options()
         # Architecture Generation
         # -----------------------
 
-        # Default to nothing for error handling. 
+        # Default to nothing for error handling.
         :architecture => nothing,
         # Default the number of links to 2 to match Asap3/4 architectures.
         # This option will be invalid if ':architecture' is a FunctionCall.
@@ -105,19 +105,24 @@ function _get_default_options()
 
         # Set to "true" to assign weights to inter-task communication links
         # according to the normalized number of writes on that link.
-        :weight_links => false,
+        :use_link_weights => false,
         # Set to "true" to include frequency as a criteria for mapping.
-        :use_frequency => false,
-        :frequency_penalty_start => 16.0,
+        :use_task_ranks => false,
+        :task_rank_penalty_start => 512.0,
         # If these options are left as "nothing", will pull frequency information
-        # out of the Project Manager input file. Otherwise, if they are a 
+        # out of the Project Manager input file. Otherwise, if they are a
         # "FunctionCall" to a synthetic generation function, that function will be
         # used to to generate frequency data.
-        :num_bins           => 5,
-        :task_freq_source   => t::Taskgraph -> read_task_frequencies(t),
-        :task_freq_bin      => (t::Taskgraph,b) -> bin_by_percentage(t, b),
-        :proc_freq_source   => x::TopLevel -> nothing,
-        :proc_freq_bin      => (x::TopLevel,b) -> bin_by_percentage(x, b),
+        :task_rank_key              => "Rank",
+        :task_rank_derivative_key   => "Rank_Derivative",
+        :task_rank_source       => (t, options) -> read_task_ranks(t, options),
+        :task_rank_normalize    => (t::Taskgraph,b) -> normalize_ranks(t, b),
+        :proc_rank_source       => x::TopLevel -> nothing,
+        :proc_rank_normalize    => (x::TopLevel,b) -> normalize_ranks(x, b),
+
+        # Perform quartile normalization between the task and processor
+        # ranks.
+        :use_quartile_normalization => true,
       )
 end
 
@@ -139,7 +144,7 @@ end
     parse_options(internal::Dict, external::Dict)
 
 Parse the options passed internally and externally. Prune all external options
-that are not in the `default_options` dict and return a final options 
+that are not in the `default_options` dict and return a final options
 dictionary with the following option precedences from highest to lowest:
 
 `internal`, `external`, `default`.
@@ -199,18 +204,36 @@ function build_map(c::PMConstructor)
 
     # Run Architecture transforms.
     name_mappables(a, json_dict)
-    compute_frequencies(a, json_dict)
+    compute_ranks(a, json_dict)
 
     # build the map and attach the options dictionary to it.
     m = NewMap(a,t)
-    m.options = json_dict[_options_path_]
+    options = json_dict[_options_path_]
+    m.options = options
+
+    if options[:use_task_ranks] && options[:use_quartile_normalization]
+        quartile_normalize_processors(m)
+    end
+
+    # Print out the important operations for information/debugging purposes.
+    task_rank_key = options[:use_task_ranks] ? options[:task_rank_key] : ""
+    @info """
+    Mapper Options Summary
+    ----------------------
+
+    Using Link Weights: $(options[:use_link_weights])
+
+    Using Task Ranks: $(options[:use_task_ranks])
+
+    Task Rank Key: $task_rank_key
+    """
 
     return m
 end
 
 function asap_pnr(m::Map)
-    if m.options[:use_frequency]
-        aux = m.options[:frequency_penalty_start] 
+    if m.options[:use_task_ranks]
+        aux = m.options[:task_rank_penalty_start]
         while true
             m = place(m, enable_address = true, aux = aux)
             success = true
@@ -234,12 +257,19 @@ function asap_pnr(m::Map)
             try
                 place(m)
                 route(m)
-                check_routing(m) && return m
+                check_routing(m) && break
             catch err
                 @error "Received routing error: $err. Trying again."
             end
         end
     end
+
+    # for debug purposes
+    # save the mapping.
+    #path = augment(".", "mapper_out.jls")
+    #println("Saving to $path")
+    #Mapper2.MapperCore.save(m, path)
+
     return m
 end
 
@@ -256,7 +286,7 @@ function build_architecture(c::PMConstructor, json_dict)
     options = json_dict[_options_path_]
     arch = options[:architecture]
 
-    # If a custom FunctionCall is passed - use that as an architecture 
+    # If a custom FunctionCall is passed - use that as an architecture
     # constructor. Otherwise, parse through the passed string to decode the
     # architecture.
     if typeof(arch) <: FunctionCall
@@ -265,10 +295,10 @@ function build_architecture(c::PMConstructor, json_dict)
     end
 
     num_links       = options[:num_links]
-    weight_links    = options[:weight_links]
-    use_frequency   = options[:use_frequency]
+    use_link_weights    = options[:use_link_weights]
+    use_task_ranks   = options[:use_task_ranks]
 
-    kc_type = KC{true,use_frequency}
+    kc_type = KC{true,use_task_ranks}
     @debug "Use KC Type: $kc_type"
 
     # Perform manual dispatch based on the string.
@@ -315,7 +345,7 @@ taskgraph_ops(::PMConstructor) = (
                                   transform_task_types,
                                   compute_edge_metadata,
                                   apply_link_weights,
-                                  interpret_frequency,
+                                  assign_ranks,
                                  )
 
 function parse_input(t::Taskgraph, tasklist, options)
@@ -343,7 +373,7 @@ function parse_input(t::Taskgraph, tasklist, options)
         leaf_node_dict = task["leaf_node_dict"]
         for (link_class, link_dict) in leaf_node_dict
             if !use_packet_links && link_class == "Packet_Link"
-                continue 
+                continue
             end
             # Deep dictionary walking ...
             for io_decl in values(link_dict), link_def in values(io_decl)
@@ -399,7 +429,7 @@ function compute_edge_metadata(t::Taskgraph, options::Dict)
         if edge.metadata["pm_class"] == "Circuit_Link"
             neighbor = getsinks(edge)
             @assert length(neighbor) == 1
-            
+
             neighbor_node = getnode(t, first(neighbor))
 
             # I came across an edge case when doing so mappings for ASAP2 with
@@ -483,10 +513,10 @@ function apply_link_weights(t::Taskgraph, options::Dict)
     # Need to still apply weight in order to get memory modules to work correctly.
     # Just assigns unit weights to each non-memory link and a weight of 5.0
     # to each memory link.
-    weight_links = options[:weight_links]
+    use_link_weights = options[:use_link_weights]
 
-    # Determine the maximium and minimum number of writes over the entire 
-    # colletion of edges. Do this in a single pass through the input 
+    # Determine the maximium and minimum number of writes over the entire
+    # colletion of edges. Do this in a single pass through the input
     # dictionary as this will work correctly even if the "num_writes" field
     # of the measurements dict is not available.
     min_writes = typemax(Int64)
@@ -494,7 +524,7 @@ function apply_link_weights(t::Taskgraph, options::Dict)
     for edge in getedges(t)
         measurements = edge.metadata["measurements_dict"]
         source_task = getnode(t, first(getsources(edge)))
-        if haskey(measurements, "num_writes") && !isinput(source_task)
+        if haskey(measurements, "num_writes")
             num_writes = measurements["num_writes"]
             # Keep track of minimum and maximum number of writes.
             min_writes = min(min_writes, num_writes)
@@ -517,22 +547,15 @@ function apply_link_weights(t::Taskgraph, options::Dict)
         source_task = getnode(t, first(getsources(edge)))
         dest_task   = getnode(t, first(getsinks(edge)))
 
-        # Since memory processors must be located directly next to their 
+        # Since memory processors must be located directly next to their
         # respective memories, assign a high cost to memory links.
         if edge.metadata["pm_class"] in ("Memory_Request_Link", "Memory_Response_Link")
                 edge.metadata["cost"] = memory_link_weight
 
-        # Default value if per-link weight is not being used, or if for some 
+        # Default value if per-link weight is not being used, or if for some
         # reason measurements associated with a link are missing.
-        elseif !weight_links || !haskey(measurements, "num_writes")
+        elseif !use_link_weights || !haskey(measurements, "num_writes")
             edge.metadata["cost"] = 1.0
-
-        # The simulator does not count energy used by the input link. Assign
-        # all input links the minimum link weight to bring this into alignment
-        # with the simulators results.
-        # TODO: Fix the simulator.
-        elseif isinput(source_task)
-            edge.metadata["cost"] = minimum_link_weight
 
         # By default, scale the weight of a link with the number of writes
         # on the link. Scale between the minimum and maximum number of writes
@@ -551,79 +574,111 @@ function apply_link_weights(t::Taskgraph, options::Dict)
     return t
 end
 
-function interpret_frequency(t::Taskgraph, options::Dict)
+function assign_ranks(t::Taskgraph, options::Dict)
     # Early Abort
-    options[:use_frequency] || (return t)
+    options[:use_task_ranks] || (return t)
     # Get callback for frequency assignment.
     # Can choose to either use data encoded directly in the taskgraph or to
     # generate synthetic data.
-    options[:task_freq_source](t)
+    options[:task_rank_source](t, options)
     # Use the selected binning function to bin frequencies.
-    options[:task_freq_bin](t, options[:num_bins])
+    options[:task_rank_normalize](t, options)
     return t
 end
 
-function read_task_frequencies(t::Taskgraph)
+function read_task_ranks(t::Taskgraph, options::Dict)
+    rank_key        = options[:task_rank_key]
+    derivative_key  = options[:task_rank_derivative_key]
+
+    # Iterate through all nodes. Create an empty "TaskRank" type and attach
+    # it to the metadata for each node.
     for task in getnodes(t)
         measurements = task.metadata["measurements_dict"]
-        metric = get(measurements, "Get_Utilization()", 1.0)
-        setmetric!(task, metric)
-    end
-end
 
-function generate_task_frequencies(t::Taskgraph)
-    @debug "Generating Task Frequencies"
-    for task in getnodes(t)
-        setmetric!(task, metric)
+        # Get the specified rank and derivative from the measurements dictionary
+        # Set them to "missing" if not provided.
+        #
+        # This will be taken care of
+        # when they are normalized in a later processing step.
+        rank        = get(measurements, rank_key, missing)
+        derivative  = get(measurements, derivative_key, missing)
+
+        taskrank = TaskRank(rank, derivative)
+        setrank!(task, taskrank)
     end
 end
 
 ################################################################################
-# Task binning functions
+function normalize_ranks(t::Taskgraph, options::Dict)
+    @debug "Normalizing Ranks"
 
-function bin_task_frequencies(t::Taskgraph, nbins::Int)
-    @debug "Binning Task Frequencies"
-    # Step 1: Collect the range of frequencies to determine the size of each bin.
-    metrics = [getmetric(task) for task in getnodes(t)]
-    mmin, mmax = extrema(metrics)
-    binsize = (mmax - mmin) / nbins
+    # Gather all of the rank types from the tasks.
+    taskranks = [getrank(task) for task in getnodes(t)]
 
-    # Step 2: Assign bins to each task. Fastest frequency requirement 
-    # (highest bin) will get the lowest bin.
-    bins = Float64[]
-    for task in getnodes(t)
-        task_metric = getmetric(task)
-        # Quick check to put the max frequency into bin 1.0
-        if task_freq == mmax
-            bin = 1.0
-        else
-            bin = ceil( (mmax - task_freq) / binsize )
+    # Want to scale the rank portions between 0 and 1, where a higher rank
+    # indicates it is more important.
+    #
+    # Do this by iterating through all ranks to find the minimum and maximum
+    # rank and derivative values.
+    #
+    # If a given rank is missing, assume it is important.
+    rank_min = typemax(Float64)
+    rank_max = typemin(Float64)
+
+    derivative_min = typemax(Float64)
+    derivative_max = typemin(Float64)
+
+    for taskrank in taskranks
+        # unpack raw ranks
+        rank = taskrank.rank
+        if !ismissing(rank)
+            rank_min = min(rank, rank_min)
+            rank_max = max(rank, rank_max)
         end
-        setbin!(task, bin)
-        push!(bins, bin)
+
+        # unpack derivative
+        derivative = taskrank.derivative
+        if !ismissing(derivative)
+            derivative_min = min(derivative, derivative_min)
+            derivative_max = max(derivative, derivative_max)
+        end
     end
-    @debug """
-    Task Bins: $bins
-    """
-end
 
-function bin_by_percentage(t::Taskgraph, args...)
-    @debug "Binning by percentage"
-    metrics = [getmetric(task) for task in getnodes(t)]
-    mmin, mmax = extrema(metrics)
-    range = (mmax - mmin)
+    # Assign all tasks a maximum normalized rank if rank_min == rank_max.
+    # Do equivalent for the derivative.
+    maximize_all_ranks = rank_max == rank_min
 
-    bins = Float64[]
+    derivative_max_abs = max(abs(derivative_min), abs(derivative_max))
+    maximize_all_derivatives = iszero(derivative_max_abs)
+
+    num_digits = 6
+    min_val = 2.0 ^ (-num_digits)
+
     for task in getnodes(t)
-        task_metric = getmetric(task)
-        # Normalize to the range 0 to 1
-        # Higher priority tasks will be closer to zero.
-        bin = round( (mmax - task_freq) / range, 3, 2)
-        setbin!(task, bin)
-        push!(bins, bin)
-    end
+        taskrank = getrank(task)
 
-    @debug "Task Bins: $bins"
+        # Normalize to the range 0 to 1
+        rank = taskrank.rank
+        if ismissing(rank) || maximize_all_ranks
+            taskrank.normalized_rank = 1.0
+        else
+            taskrank.normalized_rank = round(
+                (rank - rank_min) / (rank_max - rank_min), num_digits, 2
+               )
+        end
+
+        # Normalized derivative
+        # Add a negative sign for correction.
+        derivative = -taskrank.derivative
+        if ismissing(derivative) || maximize_all_derivatives
+            taskrank.normalized_derivative = 1.0
+        else
+            taskrank.normalized_derivative = max(
+                    round( derivative / derivative_max_abs, num_digits, 2),
+                    min_val
+                   )
+        end
+    end
 end
 
 ################################################################################
@@ -678,21 +733,23 @@ function name_mappables(a::TopLevel, json_dict)
                 # Set the metadata for this component and exit
                 component.metadata["pm_name"] = core["name"]
                 component.metadata["pm_type"] = core["type"]
-                component.metadata["max_frequency"] = core["max_frequency"]
+
+                rank = get(core,"max_frequency",missing)
+                setrank!(component, CoreRank(rank))
                 break
             end
         end
     end
 end
 
-function compute_frequencies(a::TopLevel, json_dict)
-    options = json_dict[_options_path_]     
-    # Abort if 'use_frequency' is false
-    !options[:use_frequency] && (return)
+function compute_ranks(a::TopLevel, json_dict)
+    options = json_dict[_options_path_]
+    # Abort if 'use_task_ranks' is false
+    !options[:use_task_ranks] && (return)
     # Callback for synthetically assigning frequencies if needed.
-    options[:proc_freq_source](a)
+    options[:proc_rank_source](a)
     # Callback for binning frequencies.
-    options[:proc_freq_bin](a, options[:num_bins])
+    options[:proc_rank_normalize](a, options)
 end
 
 # Synthetic generator for architecture frequencies.
@@ -705,74 +762,95 @@ function generate_arch_frequencies(a::TopLevel)
     end
 end
 
-function bin_arch_frequencies(a::TopLevel, nbins::Int)
+function normalize_ranks(a::TopLevel, options)
     children = walk_children(a)
     # First, handle input/output handlers
-    g(x) = search_metadata(a[x], "attributes", ("input_handler", "output_handler"), oneofin)
+    types = (MTypes.input, MTypes.output, MTypes.memory(1))
+    g(x) = search_metadata(a[x], typekey(), types, oneofin)
     iopaths = filter(g, children)
+
     for path in iopaths
-        a[path].metadata["frequency_bin"] = 1.0
+        getrank(a[path]).normalized_rank = 1.0
     end
 
     # Now handle processors and memories
-    f(x) = search_metadata(a[x], "attributes", ("processor", "memory_1port"), oneofin)
+    f(x) = search_metadata(a[x], typekey(), (MTypes.proc,), oneofin)
     paths = filter(f, walk_children(a))
-    
-    frequencies = [a[path].metadata["max_frequency"] for path in paths]
-    fmin, fmax = extrema(frequencies)
-    binsize = (fmax - fmin) / nbins
 
-    @debug """
-    fmin: $fmin
-    fmax: $fmax
-    binsize: $binsize
-    """
+    coreranks = [getrank(a[path]) for path in paths]
 
-    bins = Float64[]
-    for path in paths
-        core_freq = a[path].metadata["max_frequency"]
-        if core_freq == fmax
-            bin = 1.0
-        else
-            bin = ceil( (fmax - core_freq) / binsize )
+    rank_min = typemax(Float64)
+    rank_max = typemin(Float64)
+    for corerank in coreranks
+        rank = corerank.rank
+        if !ismissing(rank)
+            rank_min = min(rank_min, rank)
+            rank_max = max(rank_max, rank)
         end
-        a[path].metadata["frequency_bin"] = bin
-        push!(bins, bin)
     end
 
-    @debug "Core Bins: $bins"
+    rank_range = (rank_max - rank_min)
+
+    # If range is zero - all cores have the same frequency.
+    maximize_all_ranks = iszero(rank_range)
+    num_digits = 6
+
+    for path in paths
+        corerank = getrank(a[path])
+
+        rank = corerank.rank
+        if maximize_all_ranks
+            corerank.normalized_rank = 1.0
+        else
+            corerank.normalized_rank = round( (rank - rank_min) / rank_range, 6, 2)
+        end
+    end
 end
 
-function bin_by_percentage(a::TopLevel, args...)
-    children = walk_children(a)
-    # First, handle input/output handlers
-    g(x) = search_metadata(a[x], "attributes", ("input_handler", "output_handler"), oneofin)
-    iopaths = filter(g, children)
-    for path in iopaths
-        a[path].metadata["frequency_bin"] = 0.0
+function quartile_normalize_processors(m::Map)
+    # Outline:
+    # 1. Get the normalized ranks of all processor tasks. Assume N tasks
+    # 2. Get the normalized ranks of all processor cores. Assume M >= N cores.
+    # 3. Do quartile normalization on tasks and cores using the first N cores.
+    # 4. Scale the normalized rank of the last M - N cores by scaling their
+    # non-quartile normalized ranks to the minimum post normalized rank.
+
+    taskgraph       = m.taskgraph
+    architecture    = m.architecture
+
+    taskranks = [getrank(task) for task in getnodes(taskgraph) if isproc(task)]
+    coreranks = [getrank(architecture[path]) 
+                 for path in walk_children(architecture)
+                 if isproc(architecture[path])]
+
+    # Extract and sort ranks from highest to lowest.
+    task_normalized_ranks = sort([t.normalized_rank for t in taskranks], rev = true)
+    core_normalized_ranks = sort([c.normalized_rank for c in coreranks], rev = true)
+    cutoff_index = length(task_normalized_ranks)
+
+    # Average together the first length(normalized_task_ranks) items in the
+    # sorted vectors
+    quartile_normalized_ranks = [(task_normalized_ranks[i] + core_normalized_ranks[i]) / 2 for i in 1:cutoff_index]
+
+    # Assign quartile normalized ranks to each taskrank 
+    for taskrank in taskranks
+        index = findfirst(x -> x == taskrank.normalized_rank, task_normalized_ranks)
+        taskrank.quartile_normalized_rank = quartile_normalized_ranks[index]
     end
 
-    # Now handle processors and memories
-    f(x) = search_metadata(a[x], "attributes", ("processor", "memory_1port"), oneofin)
-    paths = filter(f, walk_children(a))
-    
-    frequencies = [a[path].metadata["max_frequency"] for path in paths]
-    fmin, fmax = extrema(frequencies)
-    range = (fmax - fmin)
+    # For cores that were not considered in the normalization process, scale 
+    # their final scores linearly among the range left.
+    min_qnr = minimum(quartile_normalized_ranks)
+    cutoff_core_rank = core_normalized_ranks[cutoff_index]
 
-    @debug """
-    fmin: $fmin
-    fmax: $fmax
-    range: $range
-    """
+    scale_factor = min_qnr / cutoff_core_rank
 
-    bins = Float64[]
-    for path in paths
-        core_freq = a[path].metadata["max_frequency"]
-        bin = round( (fmax - core_freq) / range, 3, 2)
-        a[path].metadata["frequency_bin"] = bin
-        push!(bins, bin)
+    for corerank in coreranks
+        index = findfirst(x -> x == corerank.normalized_rank, core_normalized_ranks)
+        if index > cutoff_index
+            corerank.quartile_normalized_rank = scale_factor * corerank.normalized_rank 
+        else
+            corerank.quartile_normalized_rank = quartile_normalized_ranks[index]
+        end
     end
-
-    @debug "Core Bins: $bins"
 end
