@@ -20,6 +20,7 @@ set_logging(level) = configure_logging(AsapMapper, min_level=level)
 export  place_and_route,
         testmap,
         asap_place,
+        parallel_map_and_save,
         place,
         route,
         set_logging,
@@ -121,10 +122,29 @@ function place_and_route(profile_path, dump_path)
     # Initialize an uncompressed taskgraph constructor
     c = PMConstructor(profile_path)
     m = build_map(c)
+
     # Run place-and-route
-    m = asap_pnr(m)
+    if typeof(m.options[:existing_map]) <: Void
+        m = asap_pnr(m)
+    end
     # Dump mapping to given dump path
     dump_map(m, dump_path)
+end
+
+function parallel_map_and_save(input_file, output_dir, num_mappings)
+    # Make output directory if it does not exist.
+    if !isdir(output_dir)
+        mkdir(output_dir)
+    end
+
+    # Launch a parallel mapping
+    c = PMConstructor(input_file)
+    maps = pmap((i) -> (asap_pnr ∘ build_map)(c), 1:num_mappings)
+
+    for (i,m) in enumerate(maps)
+        savepath = joinpath(output_dir, "map_$(i).jls")
+        Mapper2.MapperCore.save(m, savepath)
+    end
 end
 
 end # module

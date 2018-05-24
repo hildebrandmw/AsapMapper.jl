@@ -2,8 +2,17 @@
 push!(LOAD_PATH, @__DIR__)
 push!(LOAD_PATH, joinpath(@__DIR__, ".."))
 
-using AsapMapper
-using Mapper2
+# Check if running in parallel mode. If not, just use the normal "using" import
+# to make Mapper packages visible. Otherwise, use @everywhere to ensure all
+# workers see the Mapper packages.
+if nprocs() == 1
+    using AsapMapper
+    using Mapper2
+else
+    println("Starting Mapper in parallel mode with $(nworkers()) workers")
+    @everywhere using AsapMapper
+    @everywhere using Mapper2
+end
 
 function print_help()
     print("""
@@ -38,6 +47,6 @@ function main()
 end
 
 # Only run the main function if arguments are provided.
-if length(ARGS) > 0
-    main()
-end
+#if length(ARGS) > 0
+#    main()
+#end

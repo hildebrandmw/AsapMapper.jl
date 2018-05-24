@@ -90,39 +90,56 @@ function _get_default_options()
         # Architecture Generation
         # -----------------------
 
-        # Default to nothing for error handling.
+        # Default to nothing. If this is not set in the input file, a run
+        # time error will be generated somewhere.
         :architecture => nothing,
+
         # Default the number of links to 2 to match Asap3/4 architectures.
-        # This option will be invalid if ':architecture' is a FunctionCall.
+        # Invalid if:
+        #   - typeof(architecture) <: FunctionCall
         :num_links => 2,
 
         # Mapping Options
         # ---------------
         # Number of times to retry place and route if congested.
         :num_retries => 3,
+
         # Set to true to use packet links during placement.
         :use_packet_links => false,
 
         # Set to "true" to assign weights to inter-task communication links
         # according to the normalized number of writes on that link.
-        :use_link_weights => false,
+        :use_profiled_links => false,
+
         # Set to "true" to include frequency as a criteria for mapping.
-        :use_task_ranks => false,
-        :task_rank_penalty_start => 512.0,
-        # If these options are left as "nothing", will pull frequency information
-        # out of the Project Manager input file. Otherwise, if they are a
-        # "FunctionCall" to a synthetic generation function, that function will be
-        # used to to generate frequency data.
+        :use_task_suitability => false,
+
+        # Mapping comes in two flavors: Rank, which correlates ranks tasks from
+        # fastest to slowest in some absolute sence, and "Rank_Derivative", 
+        # which describes how much violating a frequency target should be
+        # penalized.
+        :use_task_ranks             => false,
+        :use_rank_derivatives       => false,
+        :task_rank_penalty_start    => 64.0,
+
+        # Set which entry in the "Measurements Dict" is to be used to select
+        # the metric for rank and rank derivative.
         :task_rank_key              => "Rank",
         :task_rank_derivative_key   => "Rank_Derivative",
-        :task_rank_source       => (t, options) -> read_task_ranks(t, options),
-        :task_rank_normalize    => (t::Taskgraph,b) -> normalize_ranks(t, b),
-        :proc_rank_source       => x::TopLevel -> nothing,
-        :proc_rank_normalize    => (x::TopLevel,b) -> normalize_ranks(x, b),
 
-        # Perform quartile normalization between the task and processor
-        # ranks.
-        :use_quartile_normalization => true,
+        # Various dispatch functions. These are not meant to be controlled by
+        # the project manager, but to provide a way of inserting custom
+        # rank generation within the mapper itself.
+        #:task_rank_source       => (t, options) -> read_task_ranks(t, options),
+        #:task_rank_normalize    => (t::Taskgraph,b) -> normalize_ranks(t, b),
+        #:proc_rank_source       => x::TopLevel -> nothing,
+        #:proc_rank_normalize    => (x::TopLevel,b) -> normalize_ranks(x, b),
+
+        # Perform quartile normalization between the task and processor ranks.
+        :use_quartile_normalization => false,
+
+        # Method for loading an existing file.
+        :existing_map => nothing,
       )
 end
 
@@ -211,28 +228,46 @@ function build_map(c::PMConstructor)
     options = json_dict[_options_path_]
     m.options = options
 
-    if options[:use_task_ranks] && options[:use_quartile_normalization]
+    if options[:use_task_suitability] && options[:use_quartile_normalization]
         quartile_normalize_processors(m)
     end
 
+    # Load an existing map if provided with one.
+    if typeof(options[:existing_map]) <: String
+        Mapper2.MapperCore.load(m, options[:existing_map])
+    end
+
+
     # Print out the important operations for information/debugging purposes.
-    task_rank_key = options[:use_task_ranks] ? options[:task_rank_key] : ""
+    task_rank_key = options[:use_task_suitability] ? options[:task_rank_key] : ""
+    task_derivative_key = options[:use_task_suitability] ? options[:task_rank_derivative_key] : ""
     @info """
     Mapper Options Summary
     ----------------------
 
-    Using Link Weights: $(options[:use_link_weights])
+    Using Link Weights: $(options[:use_profiled_links])
+
+    Using Task Suitability: $(options[:use_task_suitability])
 
     Using Task Ranks: $(options[:use_task_ranks])
 
     Task Rank Key: $task_rank_key
+
+    Using Task Derivatives: $(options[:use_rank_derivatives])
+
+    Task Derivative Key : $task_derivative_key
+
+    Using Quartile Normalization: $(options[:use_quartile_normalization])
+
+    Existing Map: $(options[:existing_map])
     """
 
     return m
 end
 
-function asap_pnr(m::Map)
-    if m.options[:use_task_ranks]
+function asap_pnr(m::Map{A,D}) where {A,D}
+    println("Map type: ", A)
+    if m.options[:use_task_suitability]
         aux = m.options[:task_rank_penalty_start]
         while true
             m = place(m, enable_address = true, aux = aux)
@@ -294,11 +329,11 @@ function build_architecture(c::PMConstructor, json_dict)
         return call(arch)
     end
 
-    num_links       = options[:num_links]
-    use_link_weights    = options[:use_link_weights]
-    use_task_ranks   = options[:use_task_ranks]
+    num_links             = options[:num_links]
+    use_profiled_links    = options[:use_profiled_links]
+    use_task_suitability  = options[:use_task_suitability]
 
-    kc_type = KC{true,use_task_ranks}
+    kc_type = KC{true,use_task_suitability}
     @debug "Use KC Type: $kc_type"
 
     # Perform manual dispatch based on the string.
@@ -513,7 +548,7 @@ function apply_link_weights(t::Taskgraph, options::Dict)
     # Need to still apply weight in order to get memory modules to work correctly.
     # Just assigns unit weights to each non-memory link and a weight of 5.0
     # to each memory link.
-    use_link_weights = options[:use_link_weights]
+    use_profiled_links = options[:use_profiled_links]
 
     # Determine the maximium and minimum number of writes over the entire
     # colletion of edges. Do this in a single pass through the input
@@ -554,7 +589,7 @@ function apply_link_weights(t::Taskgraph, options::Dict)
 
         # Default value if per-link weight is not being used, or if for some
         # reason measurements associated with a link are missing.
-        elseif !use_link_weights || !haskey(measurements, "num_writes")
+        elseif !use_profiled_links || !haskey(measurements, "num_writes")
             edge.metadata["cost"] = 1.0
 
         # By default, scale the weight of a link with the number of writes
@@ -576,13 +611,16 @@ end
 
 function assign_ranks(t::Taskgraph, options::Dict)
     # Early Abort
-    options[:use_task_ranks] || (return t)
+    options[:use_task_suitability] || (return t)
     # Get callback for frequency assignment.
     # Can choose to either use data encoded directly in the taskgraph or to
     # generate synthetic data.
-    options[:task_rank_source](t, options)
+    read_task_ranks(t, options)
+    #options[:task_rank_source](t, options)
     # Use the selected binning function to bin frequencies.
-    options[:task_rank_normalize](t, options)
+    normalize_ranks(t, options)
+    #options[:task_rank_normalize](t, options)
+
     return t
 end
 
@@ -611,6 +649,9 @@ end
 ################################################################################
 function normalize_ranks(t::Taskgraph, options::Dict)
     @debug "Normalizing Ranks"
+
+    use_task_ranks = options[:use_task_ranks]
+    use_rank_derivatives = options[:use_rank_derivatives]
 
     # Gather all of the rank types from the tasks.
     taskranks = [getrank(task) for task in getnodes(t)]
@@ -659,7 +700,7 @@ function normalize_ranks(t::Taskgraph, options::Dict)
 
         # Normalize to the range 0 to 1
         rank = taskrank.rank
-        if ismissing(rank) || maximize_all_ranks
+        if ismissing(rank) || maximize_all_ranks || !use_task_ranks
             taskrank.normalized_rank = 1.0
         else
             taskrank.normalized_rank = round(
@@ -670,7 +711,7 @@ function normalize_ranks(t::Taskgraph, options::Dict)
         # Normalized derivative
         # Add a negative sign for correction.
         derivative = -taskrank.derivative
-        if ismissing(derivative) || maximize_all_derivatives
+        if ismissing(derivative) || maximize_all_derivatives || !use_rank_derivatives
             taskrank.normalized_derivative = 1.0
         else
             taskrank.normalized_derivative = max(
@@ -679,6 +720,7 @@ function normalize_ranks(t::Taskgraph, options::Dict)
                    )
         end
     end
+
 end
 
 ################################################################################
@@ -744,22 +786,10 @@ end
 
 function compute_ranks(a::TopLevel, json_dict)
     options = json_dict[_options_path_]
-    # Abort if 'use_task_ranks' is false
-    !options[:use_task_ranks] && (return)
+    # Abort if 'use_task_suitability' is false
+    options[:use_task_suitability] || (return)
     # Callback for synthetically assigning frequencies if needed.
-    options[:proc_rank_source](a)
-    # Callback for binning frequencies.
-    options[:proc_rank_normalize](a, options)
-end
-
-# Synthetic generator for architecture frequencies.
-function generate_arch_frequencies(a::TopLevel)
-    f(path) = search_metadata(a[path], "attributes")
-    paths = filter(f, walk_children(a))
-
-    for path in paths
-        a[path].metadata["max_frequency"] = randn()
-    end
+    normalize_ranks(a, options)
 end
 
 function normalize_ranks(a::TopLevel, options)
@@ -792,15 +822,15 @@ function normalize_ranks(a::TopLevel, options)
     rank_range = (rank_max - rank_min)
 
     # If range is zero - all cores have the same frequency.
-    maximize_all_ranks = iszero(rank_range)
+    minimize_all_ranks = iszero(rank_range)
     num_digits = 6
 
     for path in paths
         corerank = getrank(a[path])
 
         rank = corerank.rank
-        if maximize_all_ranks
-            corerank.normalized_rank = 1.0
+        if minimize_all_ranks
+            corerank.normalized_rank = 0.0
         else
             corerank.normalized_rank = round( (rank - rank_min) / rank_range, 6, 2)
         end
