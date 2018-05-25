@@ -795,7 +795,7 @@ end
 function normalize_ranks(a::TopLevel, options)
     children = walk_children(a)
     # First, handle input/output handlers
-    types = (MTypes.input, MTypes.output, MTypes.memory(1))
+    types = (MTypes.input, MTypes.output)
     g(x) = search_metadata(a[x], typekey(), types, oneofin)
     iopaths = filter(g, children)
 
@@ -804,7 +804,7 @@ function normalize_ranks(a::TopLevel, options)
     end
 
     # Now handle processors and memories
-    f(x) = search_metadata(a[x], typekey(), (MTypes.proc,), oneofin)
+    f(x) = search_metadata(a[x], typekey(), (MTypes.proc,MTypes.memory(1)), oneofin)
     paths = filter(f, walk_children(a))
 
     coreranks = [getrank(a[path]) for path in paths]
