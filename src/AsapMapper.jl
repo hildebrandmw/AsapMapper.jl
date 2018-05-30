@@ -8,6 +8,7 @@ using Missings
 is07 ? (using Logging) : (using MicroLogging)
 using NamedTuples
 using Compat
+using DataStructures
 
 # Set up directory paths
 const SRCDIR = @__DIR__

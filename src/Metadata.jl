@@ -99,19 +99,14 @@ mutable struct TaskRank
     # Ranks
     rank                    ::Union{Float64,Missing}
     normalized_rank         ::Float64
-    quartile_normalized_rank::Union{Float64,Missing}
-    # Derivatives
-    derivative            ::Union{Float64,Missing}
-    normalized_derivative ::Float64
 end
-TaskRank(rank, derivative) = TaskRank(rank, 0, missing, derivative, 0)
+TaskRank(rank) = TaskRank(rank, 0)
 
 mutable struct CoreRank
     rank                    ::Union{Float64,Missing}
     normalized_rank         ::Float64
-    quartile_normalized_rank::Union{Float64,Missing}
 end
-CoreRank(rank) = CoreRank(rank, 0, missing)
+CoreRank(rank) = CoreRank(rank, 0)
 
 # Make these generic so they work on Components and TaskgraphNodes.
 getrank(t) = t.metadata["rank"]
