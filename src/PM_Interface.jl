@@ -114,29 +114,15 @@ function _get_default_options()
         # Set to "true" to include frequency as a criteria for mapping.
         :use_task_suitability => false,
 
-        # Mapping comes in two flavors: Rank, which correlates ranks tasks from
-        # fastest to slowest in some absolute sence, and "Rank_Derivative", 
-        # which describes how much violating a frequency target should be
-        # penalized.
-        :use_task_ranks             => false,
-        :use_rank_derivatives       => false,
+        # Penalty term applied to missing a rank requirement.
         :task_rank_penalty_start    => 64.0,
 
         # Set which entry in the "Measurements Dict" is to be used to select
-        # the metric for rank and rank derivative.
+        # the metric for rank.
         :task_rank_key              => "Rank",
-        :task_rank_derivative_key   => "Rank_Derivative",
 
-        # Various dispatch functions. These are not meant to be controlled by
-        # the project manager, but to provide a way of inserting custom
-        # rank generation within the mapper itself.
-        #:task_rank_source       => (t, options) -> read_task_ranks(t, options),
-        #:task_rank_normalize    => (t::Taskgraph,b) -> normalize_ranks(t, b),
-        #:proc_rank_source       => x::TopLevel -> nothing,
-        #:proc_rank_normalize    => (x::TopLevel,b) -> normalize_ranks(x, b),
-
-        # Perform quartile normalization between the task and processor ranks.
-        :use_quartile_normalization => false,
+        # Choose method of normailzation. 
+        :absolute_rank_normalization => true,
 
         # Method for loading an existing file.
         :existing_map => nothing,
@@ -228,9 +214,9 @@ function build_map(c::PMConstructor)
     options = json_dict[_options_path_]
     m.options = options
 
-    if options[:use_task_suitability] && options[:use_quartile_normalization]
-        quartile_normalize_processors(m)
-    end
+    # if options[:use_task_suitability] && options[:use_quartile_normalization]
+    #     quartile_normalize_processors(m)
+    # end
 
     # Load an existing map if provided with one.
     if typeof(options[:existing_map]) <: String
@@ -240,7 +226,6 @@ function build_map(c::PMConstructor)
 
     # Print out the important operations for information/debugging purposes.
     task_rank_key = options[:use_task_suitability] ? options[:task_rank_key] : ""
-    task_derivative_key = options[:use_task_suitability] ? options[:task_rank_derivative_key] : ""
     @info """
     Mapper Options Summary
     ----------------------
@@ -249,15 +234,7 @@ function build_map(c::PMConstructor)
 
     Using Task Suitability: $(options[:use_task_suitability])
 
-    Using Task Ranks: $(options[:use_task_ranks])
-
     Task Rank Key: $task_rank_key
-
-    Using Task Derivatives: $(options[:use_rank_derivatives])
-
-    Task Derivative Key : $task_derivative_key
-
-    Using Quartile Normalization: $(options[:use_quartile_normalization])
 
     Existing Map: $(options[:existing_map])
     """
@@ -265,10 +242,44 @@ function build_map(c::PMConstructor)
     return m
 end
 
+mutable struct AuxStorage{T}
+    # Value to multiply the ratio of task rank to core rank. Helps emphasize
+    # communication energy versus task suitability.
+    task_penalty_multiplier ::Float64
+
+    # NOTE: Currently unused.
+    # Value to multiply the link costs.
+    link_penalty_multiplier ::Float64
+
+    # Store the task rank to core rank ratios inside a mutable binary maxheap
+    # from DataStructures. When moving a task, reference its entry in the 
+    # handles vector to change its ratio.
+    ratio_max_heap::T
+end
+
+AuxStorage(x, heap) = AuxStorage(Float64(x), 0.0, heap)
+
+
 function asap_pnr(m::Map{A,D}) where {A,D}
     println("Map type: ", A)
     if m.options[:use_task_suitability]
-        aux = m.options[:task_rank_penalty_start]
+        # Allocate the max_heap to store ratio information and the handles vector.
+        maxheap = DataStructures.mutable_binary_maxheap(Float64)
+
+        # Add metadata pointing to the handle to each node.
+        for task in getnodes(m.taskgraph)
+            # Initialize all ranks to 0.0. These will all be updated correctly
+            # when the nodes first get moved.
+            handle = push!(maxheap, 0.0)
+
+            # Going to store the handles for each entry in the heap in the 
+            # metadata. WHen the "RankedNode" get generated, we will look up
+            # the handle in the metadata and attach it to the node.
+            task.metadata["heap_handle"] = handle
+        end
+
+
+        aux = AuxStorage(m.options[:task_rank_penalty_start], maxheap)
         while true
             m = place(m, enable_address = true, aux = aux)
             success = true
@@ -280,11 +291,11 @@ function asap_pnr(m::Map{A,D}) where {A,D}
             catch
                 success = false
             end
-            if success && check_routing(m)
+            if success && check_routing(m; quiet = true)
                 break
             else
-                aux = aux / 2
-                @info "Routing Failed. Trying aux = $(aux)"
+                aux.task_penalty_multiplier /= 2
+                @info "Routing Failed. Trying aux = $(aux.task_penalty_multiplier)"
             end
         end
     else
@@ -292,7 +303,7 @@ function asap_pnr(m::Map{A,D}) where {A,D}
             try
                 place(m)
                 route(m)
-                check_routing(m) && break
+                check_routing(m; quiet = true) && break
             catch err
                 @error "Received routing error: $err. Trying again."
             end
@@ -626,22 +637,20 @@ end
 
 function read_task_ranks(t::Taskgraph, options::Dict)
     rank_key        = options[:task_rank_key]
-    derivative_key  = options[:task_rank_derivative_key]
 
     # Iterate through all nodes. Create an empty "TaskRank" type and attach
     # it to the metadata for each node.
     for task in getnodes(t)
         measurements = task.metadata["measurements_dict"]
 
-        # Get the specified rank and derivative from the measurements dictionary
+        # Get the specified rank from the measurements dictionary
         # Set them to "missing" if not provided.
         #
         # This will be taken care of
         # when they are normalized in a later processing step.
         rank        = get(measurements, rank_key, missing)
-        derivative  = get(measurements, derivative_key, missing)
 
-        taskrank = TaskRank(rank, derivative)
+        taskrank = TaskRank(rank)
         setrank!(task, taskrank)
     end
 end
@@ -650,8 +659,7 @@ end
 function normalize_ranks(t::Taskgraph, options::Dict)
     @debug "Normalizing Ranks"
 
-    use_task_ranks = options[:use_task_ranks]
-    use_rank_derivatives = options[:use_rank_derivatives]
+    absolute_normalize = options[:absolute_rank_normalization]
 
     # Gather all of the rank types from the tasks.
     taskranks = [getrank(task) for task in getnodes(t)]
@@ -660,14 +668,11 @@ function normalize_ranks(t::Taskgraph, options::Dict)
     # indicates it is more important.
     #
     # Do this by iterating through all ranks to find the minimum and maximum
-    # rank and derivative values.
+    # rank value.
     #
     # If a given rank is missing, assume it is important.
     rank_min = typemax(Float64)
     rank_max = typemin(Float64)
-
-    derivative_min = typemax(Float64)
-    derivative_max = typemin(Float64)
 
     for taskrank in taskranks
         # unpack raw ranks
@@ -676,21 +681,10 @@ function normalize_ranks(t::Taskgraph, options::Dict)
             rank_min = min(rank, rank_min)
             rank_max = max(rank, rank_max)
         end
-
-        # unpack derivative
-        derivative = taskrank.derivative
-        if !ismissing(derivative)
-            derivative_min = min(derivative, derivative_min)
-            derivative_max = max(derivative, derivative_max)
-        end
     end
 
     # Assign all tasks a maximum normalized rank if rank_min == rank_max.
-    # Do equivalent for the derivative.
     maximize_all_ranks = rank_max == rank_min
-
-    derivative_max_abs = max(abs(derivative_min), abs(derivative_max))
-    maximize_all_derivatives = iszero(derivative_max_abs)
 
     num_digits = 6
     min_val = 2.0 ^ (-num_digits)
@@ -700,28 +694,22 @@ function normalize_ranks(t::Taskgraph, options::Dict)
 
         # Normalize to the range 0 to 1
         rank = taskrank.rank
-        if ismissing(rank) || maximize_all_ranks || !use_task_ranks
+        if isnonranking(task)
+            taskrank.normalized_rank = 0.0
+        elseif ismissing(rank) || maximize_all_ranks
             taskrank.normalized_rank = 1.0
+        elseif absolute_normalize
+            taskrank.normalized_rank = round(rank / rank_max, num_digits, 2)
         else
             taskrank.normalized_rank = round(
                 (rank - rank_min) / (rank_max - rank_min), num_digits, 2
                )
         end
-
-        # Normalized derivative
-        # Add a negative sign for correction.
-        derivative = -taskrank.derivative
-        if ismissing(derivative) || maximize_all_derivatives || !use_rank_derivatives
-            taskrank.normalized_derivative = 1.0
-        else
-            taskrank.normalized_derivative = max(
-                    round( derivative / derivative_max_abs, num_digits, 2),
-                    min_val
-                   )
-        end
     end
-
 end
+
+# Don't rank input or output nodes.
+isnonranking(t) = isinput(t) || isoutput(t)
 
 ################################################################################
 # Architecture operations
@@ -794,9 +782,15 @@ end
 
 function normalize_ranks(a::TopLevel, options)
     children = walk_children(a)
+
+    nonranking_types = (MTypes.input, MTypes.output)
+    ranking_types = (MTypes.proc, MTypes.memory(1), MTypes.memory(2))
+
     # First, handle input/output handlers
+    # Set all of their ranks to 1.0 because right now, we aren't ranking input
+    # or output handlers.
     types = (MTypes.input, MTypes.output)
-    g(x) = search_metadata(a[x], typekey(), types, oneofin)
+    g(x) = search_metadata(a[x], typekey(), nonranking_types, oneofin)
     iopaths = filter(g, children)
 
     for path in iopaths
@@ -804,7 +798,7 @@ function normalize_ranks(a::TopLevel, options)
     end
 
     # Now handle processors and memories
-    f(x) = search_metadata(a[x], typekey(), (MTypes.proc,MTypes.memory(1)), oneofin)
+    f(x) = search_metadata(a[x], typekey(), ranking_types, oneofin)
     paths = filter(f, walk_children(a))
 
     coreranks = [getrank(a[path]) for path in paths]
@@ -819,68 +813,40 @@ function normalize_ranks(a::TopLevel, options)
         end
     end
 
+    absolute_normalize = options[:absolute_rank_normalization]
+
     rank_range = (rank_max - rank_min)
+
 
     # If range is zero - all cores have the same frequency.
     minimize_all_ranks = iszero(rank_range)
     num_digits = 6
 
+    # Must make sure that no core has a rank of zero, otherwise ratios of task
+    # rank to core rank can be infinity, which is not very useful.
+    minval = 2.0 ^ (-num_digits)
+
+    ranks = Float64[]
     for path in paths
         corerank = getrank(a[path])
 
         rank = corerank.rank
         if minimize_all_ranks
-            corerank.normalized_rank = 0.0
+            corerank.normalized_rank = minval
+        elseif absolute_normalize
+            corerank.normalized_rank = max(
+                   round( rank / rank_max, num_digits, 2),
+                   minval
+                )
         else
-            corerank.normalized_rank = round( (rank - rank_min) / rank_range, 6, 2)
+            corerank.normalized_rank = max(
+                round( (rank - rank_min) / rank_range, num_digits, 2),
+                minval
+               )
         end
-    end
-end
 
-function quartile_normalize_processors(m::Map)
-    # Outline:
-    # 1. Get the normalized ranks of all processor tasks. Assume N tasks
-    # 2. Get the normalized ranks of all processor cores. Assume M >= N cores.
-    # 3. Do quartile normalization on tasks and cores using the first N cores.
-    # 4. Scale the normalized rank of the last M - N cores by scaling their
-    # non-quartile normalized ranks to the minimum post normalized rank.
-
-    taskgraph       = m.taskgraph
-    architecture    = m.architecture
-
-    taskranks = [getrank(task) for task in getnodes(taskgraph) if isproc(task)]
-    coreranks = [getrank(architecture[path]) 
-                 for path in walk_children(architecture)
-                 if isproc(architecture[path])]
-
-    # Extract and sort ranks from highest to lowest.
-    task_normalized_ranks = sort([t.normalized_rank for t in taskranks], rev = true)
-    core_normalized_ranks = sort([c.normalized_rank for c in coreranks], rev = true)
-    cutoff_index = length(task_normalized_ranks)
-
-    # Average together the first length(normalized_task_ranks) items in the
-    # sorted vectors
-    quartile_normalized_ranks = [(task_normalized_ranks[i] + core_normalized_ranks[i]) / 2 for i in 1:cutoff_index]
-
-    # Assign quartile normalized ranks to each taskrank 
-    for taskrank in taskranks
-        index = findfirst(x -> x == taskrank.normalized_rank, task_normalized_ranks)
-        taskrank.quartile_normalized_rank = quartile_normalized_ranks[index]
+        push!(ranks, corerank.normalized_rank)
     end
 
-    # For cores that were not considered in the normalization process, scale 
-    # their final scores linearly among the range left.
-    min_qnr = minimum(quartile_normalized_ranks)
-    cutoff_core_rank = core_normalized_ranks[cutoff_index]
-
-    scale_factor = min_qnr / cutoff_core_rank
-
-    for corerank in coreranks
-        index = findfirst(x -> x == corerank.normalized_rank, core_normalized_ranks)
-        if index > cutoff_index
-            corerank.quartile_normalized_rank = scale_factor * corerank.normalized_rank 
-        else
-            corerank.quartile_normalized_rank = quartile_normalized_ranks[index]
-        end
-    end
+    #@debug "$ranks"
 end

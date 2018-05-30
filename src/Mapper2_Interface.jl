@@ -64,14 +64,57 @@ end
 ################################################################################
 # Placement
 ################################################################################
-mutable struct FreqNode{T} <: Mapper2.SA.Node
+mutable struct RankedNode{T} <: Mapper2.SA.Node
     location    ::T
     out_edges   ::Vector{Int64}
     in_edges    ::Vector{Int64}
     # Normalized rank and derivative
-    rank        ::Float64
-    derivative  ::Float64
+    rank            ::Float64
+    maxheap_handle  ::Int64
 end
+
+function SA.move(sa::SAStruct{KC{true,true}}, index, spot)
+    node = sa.nodes[index]
+    sa.grid[SA.location(node)] = 0
+    SA.assign(node, spot)
+    sa.grid[SA.location(node)] = index
+
+    # Get the rank for the core at the location of the node.
+    component_rank = sa.address_data[SA.location(node)]
+    ratio = node.rank / component_rank
+
+    update!(sa.aux.ratio_max_heap, node.maxheap_handle, ratio)
+end
+
+"""
+    swap(sa::SAStruct, node1, node2)
+
+Swap two nodes in the placement structure.
+"""
+function SA.swap(sa::SAStruct{KC{true,true}}, node1, node2)
+    # Get references to these objects to make life easier.
+    n1 = sa.nodes[node1]
+    n2 = sa.nodes[node2]
+    # Swap address/component assignments
+    s = SA.location(n1)
+    t = SA.location(n2)
+
+    SA.assign(n1, t)
+    SA.assign(n2, s)
+    # Swap grid.
+    sa.grid[t] = node1
+    sa.grid[s] = node2
+
+    n1_ratio = n1.rank / sa.address_data[SA.location(n1)]
+    n2_ratio = n2.rank / sa.address_data[SA.location(n2)]
+
+    update!(sa.aux.ratio_max_heap, n1.maxheap_handle, n1_ratio)
+    update!(sa.aux.ratio_max_heap, n2.maxheap_handle, n2_ratio)
+
+    return nothing
+end
+
+
 
 struct CostEdge <: Mapper2.SA.TwoChannel
     source ::Int64
@@ -80,24 +123,16 @@ struct CostEdge <: Mapper2.SA.TwoChannel
 end
 
 function Mapper2.SA.build_node(::Type{<:KC{T,true}}, n::TaskgraphNode, x) where T
-    taskrank = getrank(n) 
-    if ismissing(taskrank.quartile_normalized_rank)
-        rank = taskrank.normalized_rank
-    else
-        rank = taskrank.quartile_normalized_rank
-    end
-    derivative = taskrank.normalized_derivative
-    return FreqNode(x, Int64[], Int64[], rank, derivative)
+    rank = getrank(n).normalized_rank
+    handle = n.metadata["heap_handle"]
+    # Initialize all nodes to think they are the max ratio. Code for first move
+    # operation will figure out which one is really the maximum.
+    return RankedNode(x, Int64[], Int64[], rank, handle)
 end
 
 
 function Mapper2.SA.build_address_data(::Type{<:KC{T,true}}, c::Component) where T
-    corerank = getrank(c)
-    if ismissing(corerank.quartile_normalized_rank)
-        rank = corerank.normalized_rank
-    else
-        rank = corerank.quartile_normalized_rank
-    end
+    rank = getrank(c).normalized_rank
     return rank
 end
 
@@ -120,17 +155,18 @@ function Mapper2.SA.edge_cost(::Type{<:KC{true}}, sa::SAStruct, edge::CostEdge)
     return  edge.cost * sa.distance[src, dst]
 end
 
-function Mapper2.SA.address_cost(::Type{<:KC{T,true}}, sa::SAStruct, node::SA.Node) where T
-    # Get the frequency bin for the location of the node.
-    component_rank = sa.address_data[SA.location(node)]
-    if component_rank < node.rank
-        # It's expected that the attached "aux" will be some float describing 
-        # the weight to assign to the core-specific frequency objective.
-        return sa.aux * node.derivative * (node.rank - component_rank)
-    else
-        return 0.0
-    end
+function Mapper2.SA.aux_cost(::Type{<:KC{true,true}}, sa::SAStruct)
+    return sa.aux.task_penalty_multiplier * top(sa.aux.ratio_max_heap)
 end
+
+# function Mapper2.SA.address_cost(::Type{<:KC{T,true}}, sa::SAStruct, node::SA.Node) where T
+#     # Get the frequency bin for the location of the node.
+#     component_rank = sa.address_data[SA.location(node)]
+#     # Find the ratio of node rank to core rank.
+#     ratio = node.rank / component_rank
+# 
+# 
+# end
 
 ################################################################################
 # Routing
