@@ -832,7 +832,7 @@ function normalize_ranks(a::TopLevel, options)
     end
 
     #absolute_normalize = options[:absolute_rank_normalization]
-    absolute_normalize = false
+    absolute_normalize = true
 
     rank_range = (rank_max - rank_min)
 
