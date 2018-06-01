@@ -659,10 +659,11 @@ end
 function normalize_ranks(t::Taskgraph, options::Dict)
     @debug "Normalizing Ranks"
 
-    absolute_normalize = options[:absolute_rank_normalization]
+    #absolute_normalize = options[:absolute_rank_normalization]
+    absolute_normalize = true
 
     # Gather all of the rank types from the tasks.
-    taskranks = [getrank(task) for task in getnodes(t)]
+    taskranks = [getrank(task) for task in getnodes(t) if !isnonranking(task)]
 
     # Want to scale the rank portions between 0 and 1, where a higher rank
     # indicates it is more important.
@@ -686,8 +687,16 @@ function normalize_ranks(t::Taskgraph, options::Dict)
     # Assign all tasks a maximum normalized rank if rank_min == rank_max.
     maximize_all_ranks = rank_max == rank_min
 
+    @debug """
+    Rank Max: $rank_max
+
+    Rank Min: $rank_min
+    """
+
     num_digits = 6
     min_val = 2.0 ^ (-num_digits)
+
+    ranks = Float64[]
 
     for task in getnodes(t)
         taskrank = getrank(task)
@@ -699,13 +708,22 @@ function normalize_ranks(t::Taskgraph, options::Dict)
         elseif ismissing(rank) || maximize_all_ranks
             taskrank.normalized_rank = 1.0
         elseif absolute_normalize
-            taskrank.normalized_rank = round(rank / rank_max, num_digits, 2)
-        else
-            taskrank.normalized_rank = round(
-                (rank - rank_min) / (rank_max - rank_min), num_digits, 2
+            taskrank.normalized_rank = max(
+                ceil(rank / rank_max, num_digits, 2),
+                min_val,
                )
+        else
+            taskrank.normalized_rank = max(
+               ceil( (rank - rank_min) / (rank_max - rank_min), num_digits, 2),
+               min_val
+              )
         end
+
+        push!(ranks, taskrank.normalized_rank)#
     end
+
+    @debug "$ranks"
+    @debug "$(maximum(ranks))"
 end
 
 # Don't rank input or output nodes.
@@ -813,9 +831,16 @@ function normalize_ranks(a::TopLevel, options)
         end
     end
 
-    absolute_normalize = options[:absolute_rank_normalization]
+    #absolute_normalize = options[:absolute_rank_normalization]
+    absolute_normalize = false
 
     rank_range = (rank_max - rank_min)
+
+    @debug """
+    Rank Max: $rank_max
+
+    Rank Min: $rank_min
+    """
 
 
     # If range is zero - all cores have the same frequency.
@@ -848,5 +873,5 @@ function normalize_ranks(a::TopLevel, options)
         push!(ranks, corerank.normalized_rank)
     end
 
-    #@debug "$ranks"
+    @debug "$ranks"
 end

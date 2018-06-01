@@ -37,11 +37,24 @@ end
     # Plot boxes
     seriestype := :shape
 
+    # Find the maximum ratio.
     boxes = r.args[1]
+    rmax = maximum(box.task_bin / box.core_bin for box in boxes)
+
     for box in boxes
         @series begin
-            # Set fill color
-            c := box.fill
+            ratio = box.task_bin / box.core_bin
+
+            if ratio == rmax
+                c := :yellow
+            elseif box.task_bin == 1.0
+                c := :red
+            elseif box.core_bin == 1.0
+                c := :blue
+            else
+                # Set fill color
+                c := box.fill
+            end
             # Get x,y coordinates from box
             x = getx(box)
             y = gety(box)
@@ -130,13 +143,13 @@ function getboxes(m::Map{A,2}, spacing, tilesize) where A
         if MapperCore.isused(m, addr)
             fill = :cyan
             task = MapperCore.gettask(m, addr)
-            task_bin = task.metadata["bin"]
+            task_bin = getrank(task).normalized_rank
         else
             fill = :white
             task_bin = -1.0
         end
 
-        core_bin = round(Mapper2.get_metadata!(child, "bin"),2)
+        core_bin = round(Mapper2.get_metadata!(child, "rank").normalized_rank, 2)
         push!(boxes, DrawBox(x, y, width, height, fill, core_bin, task_bin))
     end
     return boxes
