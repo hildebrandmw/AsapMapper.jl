@@ -40,6 +40,17 @@ function mem_neighbors(v::Vector{MemoryLocation{D}}) where D
     return a
 end
 
+function mem_neighbor(v::Vector{MemoryLocation{D}}) where D
+    a = Array{Address{D},1}()
+    for i in v
+        base = i.address
+        for o in i.offsets
+            push!(a, base + o)
+        end
+    end
+    return a
+end
+
 
 function asap_cluster(num_links, A)
     arch = TopLevel{A,2}("asap_cluster")
@@ -153,16 +164,16 @@ function connect_memories_cluster(arch, memories)
     for mem in memories
         address = mem.address
         for (i, offset) in enumerate(mem.offsets)
-            # Build Request Link.    
+            # Build Request Link.
             offset_rule = [(-offset, "memory_out", "in[$(i-1)]")]
             connection_rule(arch, offset_rule, proc_rule, mem_rule,
-                            metadata = request_metadata, 
+                            metadata = request_metadata,
                             valid_addresses = (address + offset,))
 
             # Build response link.
             offset_rule = [(offset, "out[$(i-1)]", "memory_in")]
             connection_rule(arch, offset_rule, mem_rule, proc_rule,
-                            metadata = response_metadata, 
+                            metadata = response_metadata,
                             valid_addresses = (address,))
         end
     end
