@@ -64,7 +64,31 @@ abstract type MapConstructor end
 # Custom Architecture used by this Framework
 ################################################################################
 
-struct KC{EdgeWeight,Freq} <: AbstractArchitecture end
+
+# Invariants on the type:
+#
+# - Frequency and Multi are concrete Bool and cannot both be `true`.
+struct KC{Frequency, Multi} <: AbstractArchitecture 
+    # Inner constructor to enforce invariants on the type parameters. 
+    # Specifically, need to make sure "Frequency" and "Multi" are both
+    # booleans and not both "Bool" at the same time.
+    function KC{F,M}() where {F,M}
+        if !isa(F, Bool) || !isa(M, Bool)
+            error("Please use Boolean type parameters for KC")
+        end
+
+        if F && M
+            error("""
+                Parameters "Frequency" and "Multi" cannot both be `true`.
+                """
+            )
+        end
+        return new{F,M}()
+    end
+
+    # Convenience constructor
+    KC{F}() where F = KC{F,false}()
+end
 
 include("Helper.jl")
 include("Metadata.jl")
@@ -83,7 +107,7 @@ include("Dump.jl")
 
 # Customize placement/routing plus architectures.
 include("PNR.jl")
-include("experiments/Experiments.jl")
+#include("experiments/Experiments.jl")
 
 #include("Plots.jl")
 

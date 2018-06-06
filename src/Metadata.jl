@@ -42,12 +42,14 @@ const MTypes = @NT(
 
 typekey() = "mapper_type"
 
-isproc(c::AbstractComponent)        = haskey(c.metadata, typekey()) && in(MTypes.proc, c.metadata[typekey()])
-ismemoryproc(c::AbstractComponent)  = haskey(c.metadata, typekey()) && in(MTypes.memoryproc, c.metadata[typekey()])
-isinput(c::AbstractComponent)       = haskey(c.metadata, typekey()) && in(MTypes.input, c.metadata[typekey()])
-isoutput(c::AbstractComponent)      = haskey(c.metadata, typekey()) && in(MTypes.output, c.metadata[typekey()])
+ismappable(c::AbstractComponent)    = haskey(c.metadata, typekey())
+isproc(c::AbstractComponent)        = ismappable(c) && in(MTypes.proc, c.metadata[typekey()])
+ismemoryproc(c::AbstractComponent)  = ismappable(c) && in(MTypes.memoryproc, c.metadata[typekey()])
+isinput(c::AbstractComponent)       = ismappable(c) && in(MTypes.input, c.metadata[typekey()])
+isoutput(c::AbstractComponent)      = ismappable(c) && in(MTypes.output, c.metadata[typekey()])
+
 function ismemory(c::AbstractComponent)
-    haskey(c.metadata, typekey()) || return false
+    ismappable(c) || return false
     for i in c.metadata[typekey()]
         if ismemory(i)
             return true
@@ -88,6 +90,7 @@ make_memoryproc!(t::TN)  = (t.metadata[typekey()] = MTypes.memoryproc)
 make_memory!(t::TN, ports::Integer) = t.metadata[typekey()] = MTypes.memory(ports)
 
 # Getting task -> core requirements.
+ismappable(t::TN)   = true
 isinput(t::TN)      = t.metadata[typekey()] == MTypes.input
 isoutput(t::TN)     = t.metadata[typekey()] == MTypes.output
 isproc(t::TN)       = t.metadata[typekey()] == MTypes.proc
@@ -109,7 +112,7 @@ end
 CoreRank(rank) = CoreRank(rank, 0)
 
 # Make these generic so they work on Components and TaskgraphNodes.
-getrank(t) = t.metadata["rank"]
+getrank(t) = get(t.metadata, "rank", missing)
 setrank!(t, val) = t.metadata["rank"] = val
 
 ################################################################################

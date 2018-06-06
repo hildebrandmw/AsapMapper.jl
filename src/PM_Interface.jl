@@ -1,4 +1,4 @@
-################################################################################
+###############################################################################
 # Project Manager Datafile
 ################################################################################
 
@@ -214,10 +214,6 @@ function build_map(c::PMConstructor)
     options = json_dict[_options_path_]
     m.options = options
 
-    # if options[:use_task_suitability] && options[:use_quartile_normalization]
-    #     quartile_normalize_processors(m)
-    # end
-
     # Load an existing map if provided with one.
     if typeof(options[:existing_map]) <: String
         Mapper2.MapperCore.load(m, options[:existing_map])
@@ -310,12 +306,6 @@ function asap_pnr(m::Map{A,D}) where {A,D}
         end
     end
 
-    # for debug purposes
-    # save the mapping.
-    #path = augment(".", "mapper_out.jls")
-    #println("Saving to $path")
-    #Mapper2.MapperCore.save(m, path)
-
     return m
 end
 
@@ -344,7 +334,7 @@ function build_architecture(c::PMConstructor, json_dict)
     use_profiled_links    = options[:use_profiled_links]
     use_task_suitability  = options[:use_task_suitability]
 
-    kc_type = KC{true,use_task_suitability}
+    kc_type = KC{use_task_suitability, false}
     @debug "Use KC Type: $kc_type"
 
     # Perform manual dispatch based on the string.
@@ -359,18 +349,16 @@ end
 #-------------------------------------------------------------------------------
 
 const _pm_task_fields = ("type", "measurements_dict",)
-const _pm_edge_required = ("source_task","source_port","dest_task","dest_port")
-const _pm_edge_optional = ("measurements_dict",)
 
 const _index_types = Union{Int64,String}
 const _name_types  = String
 
 const _accepted_task_types = (
-        "Input_Handler",
-        "Output_Handler",
-        "Processor",
-        "Memory",
-       )
+    "Input_Handler",
+    "Output_Handler",
+    "Processor",
+    "Memory",
+)
 
 build_taskgraph(c::MapConstructor) = build_taskgraph(c, parse(c))
 function build_taskgraph(c::MapConstructor, json_dict::Dict)
@@ -435,21 +423,20 @@ function parse_input(t::Taskgraph, tasklist, options)
 
                 # Determine whether or not this link should be routed.
                 # Right now, only Packet Links are not supposed to be routed.
+                # TODO: Fix this.
                 route_link = !(link_class == "Packet_Link")
 
-                # Merge in the metadata
-                basic_metadata = Dict{String,Any}(
-                      "pm_class"        => link_class,
-                      "source_task"     => source_task,
-                      "source_index"    => source_index,
-                      "dest_task"       => dest_task,
-                      "dest_index"      => dest_index,
-                      "route_link"      => route_link,
+                # Create metadata for this link.
+                metadata = Dict{String,Any}(
+                      "pm_class"            => link_class,
+                      "source_task"         => source_task,
+                      "source_index"        => source_index,
+                      "dest_task"           => dest_task,
+                      "dest_index"          => dest_index,
+                      "route_link"          => route_link,
+                      "measurements_dict"   => link_def["measurements_dict"],
                      )
 
-                measurements = Dict("measurements_dict" => link_def["measurements_dict"])
-
-                metadata = merge(basic_metadata, measurements)
                 new_edge = TaskgraphEdge(source_task, dest_task, metadata)
                 add_edge(t, new_edge)
             end
@@ -627,16 +614,13 @@ function assign_ranks(t::Taskgraph, options::Dict)
     # Can choose to either use data encoded directly in the taskgraph or to
     # generate synthetic data.
     read_task_ranks(t, options)
-    #options[:task_rank_source](t, options)
-    # Use the selected binning function to bin frequencies.
     normalize_ranks(t, options)
-    #options[:task_rank_normalize](t, options)
 
     return t
 end
 
 function read_task_ranks(t::Taskgraph, options::Dict)
-    rank_key        = options[:task_rank_key]
+    rank_key = options[:task_rank_key]
 
     # Iterate through all nodes. Create an empty "TaskRank" type and attach
     # it to the metadata for each node.
@@ -648,7 +632,7 @@ function read_task_ranks(t::Taskgraph, options::Dict)
         #
         # This will be taken care of
         # when they are normalized in a later processing step.
-        rank        = get(measurements, rank_key, missing)
+        rank = get(measurements, rank_key, missing)
 
         taskrank = TaskRank(rank)
         setrank!(task, taskrank)
@@ -668,58 +652,53 @@ function normalize_ranks(t::Taskgraph, options::Dict)
     # Want to scale the rank portions between 0 and 1, where a higher rank
     # indicates it is more important.
     #
-    # Do this by iterating through all ranks to find the minimum and maximum
-    # rank value.
-    #
-    # If a given rank is missing, assume it is important.
-    rank_min = typemax(Float64)
-    rank_max = typemin(Float64)
+    # Do this by iterating through all ranks to find the maximum rank value. 
+    rank_max::Float64 = typemin(Float64)
 
     for taskrank in taskranks
         # unpack raw ranks
         rank = taskrank.rank
+
+        # Skip missing values to keep rank_min and rank_max floats.
         if !ismissing(rank)
-            rank_min = min(rank, rank_min)
             rank_max = max(rank, rank_max)
         end
     end
 
-    # Assign all tasks a maximum normalized rank if rank_min == rank_max.
-    maximize_all_ranks = rank_max == rank_min
-
-    @debug """
-    Rank Max: $rank_max
-
-    Rank Min: $rank_min
-    """
+    @debug "Maximum rank: $rank_max"
 
     num_digits = 6
     min_val = 2.0 ^ (-num_digits)
 
     ranks = Float64[]
 
+    # Normalize task ranks between 0 and 1
     for task in getnodes(t)
         taskrank = getrank(task)
-
-        # Normalize to the range 0 to 1
         rank = taskrank.rank
+
+        # Deprioritize tasks that don't matter. This includes input handlers
+        # and output handlers.
         if isnonranking(task)
             taskrank.normalized_rank = 0.0
-        elseif ismissing(rank) || maximize_all_ranks
+
+        # If a task has not been assigned a rank, assume it is important and 
+        # give it a normalized rank of 1.0
+        elseif ismissing(rank)
             taskrank.normalized_rank = 1.0
-        elseif absolute_normalize
+
+        # Default case: Scale this task's rank using the max rank.
+        # Assign a minimum value to ensure that processor at least has some
+        # rank.
+        else 
             taskrank.normalized_rank = max(
                 ceil(rank / rank_max, num_digits, 2),
                 min_val,
-               )
-        else
-            taskrank.normalized_rank = max(
-               ceil( (rank - rank_min) / (rank_max - rank_min), num_digits, 2),
-               min_val
-              )
+            )
         end
 
-        push!(ranks, taskrank.normalized_rank)#
+        # For debugging.
+        push!(ranks, taskrank.normalized_rank)
     end
 
     @debug "$ranks"
@@ -799,7 +778,7 @@ function compute_ranks(a::TopLevel, json_dict)
 end
 
 function normalize_ranks(a::TopLevel, options)
-    children = walk_children(a)
+    all_paths = walk_children(a)
 
     nonranking_types = (MTypes.input, MTypes.output)
     ranking_types = (MTypes.proc, MTypes.memory(1), MTypes.memory(2))
@@ -807,69 +786,57 @@ function normalize_ranks(a::TopLevel, options)
     # First, handle input/output handlers
     # Set all of their ranks to 1.0 because right now, we aren't ranking input
     # or output handlers.
-    types = (MTypes.input, MTypes.output)
-    g(x) = search_metadata(a[x], typekey(), nonranking_types, oneofin)
-    iopaths = filter(g, children)
-
-    for path in iopaths
-        getrank(a[path]).normalized_rank = 1.0
+    for path in all_paths
+        child = a[path]
+        if ismappable(child) && isnonranking(child)
+            getrank(child).normalized_rank = 1.0
+        end
     end
 
+    # g(x) = search_metadata(a[x], typekey(), nonranking_types, oneofin)
+    # iopaths = filter(g, children)
+
+    # for path in iopaths
+    #     getrank(a[path]).normalized_rank = 1.0
+    # end
+
     # Now handle processors and memories
-    f(x) = search_metadata(a[x], typekey(), ranking_types, oneofin)
-    paths = filter(f, walk_children(a))
+    #f(x) = search_metadata(a[x], typekey(), ranking_types, oneofin)
+    #paths = filter(f, walk_children(a))
 
-    coreranks = [getrank(a[path]) for path in paths]
+    ranking_paths = [path for path in all_paths if ismappable(a[path]) && !isnonranking(a[path])]
+    coreranks = [getrank(a[path]) for path in ranking_paths]
 
-    rank_min = typemax(Float64)
-    rank_max = typemin(Float64)
+    rank_max::Float64 = typemin(Float64)
     for corerank in coreranks
         rank = corerank.rank
         if !ismissing(rank)
-            rank_min = min(rank_min, rank)
             rank_max = max(rank_max, rank)
         end
     end
 
-    #absolute_normalize = options[:absolute_rank_normalization]
-    absolute_normalize = true
-
-    rank_range = (rank_max - rank_min)
-
-    @debug """
-    Rank Max: $rank_max
-
-    Rank Min: $rank_min
-    """
-
-
     # If range is zero - all cores have the same frequency.
-    minimize_all_ranks = iszero(rank_range)
     num_digits = 6
 
     # Must make sure that no core has a rank of zero, otherwise ratios of task
     # rank to core rank can be infinity, which is not very useful.
-    minval = 2.0 ^ (-num_digits)
+    minimum_rank = 2.0 ^ (-num_digits)
 
     ranks = Float64[]
-    for path in paths
+    for path in ranking_paths
         corerank = getrank(a[path])
 
         rank = corerank.rank
-        if minimize_all_ranks
-            corerank.normalized_rank = minval
-        elseif absolute_normalize
-            corerank.normalized_rank = max(
-                   round( rank / rank_max, num_digits, 2),
-                   minval
-                )
+        if ismissing(rank)
+            corerank.normalized_rank = minimum_rank
         else
             corerank.normalized_rank = max(
-                round( (rank - rank_min) / rank_range, num_digits, 2),
-                minval
-               )
+                round( rank / rank_max, num_digits, 2),
+                minimum_rank
+            )
         end
 
+        # For debugging.
         push!(ranks, corerank.normalized_rank)
     end
 

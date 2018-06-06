@@ -6,7 +6,7 @@ Specifically:
     - Defines attributes in the architectural model and how that relates to
         mappability.
 
-    - Custom placement TwoChannel edge that contains a "cost" field for 
+    - Custom placement TwoChannel edge that contains a "cost" field for
         annotating important links. Also provides a custom "edge_cost" method
         for this new type of link.
 
@@ -41,7 +41,7 @@ end
 function Mapper2.is_source_port(::Type{<:KC}, p::Port, e::TE)
     port_link_class = p.metadata["link_class"]
     edge_link_class = e.metadata["link_class"]
-    
+
     return port_link_class == edge_link_class
 end
 
@@ -51,7 +51,7 @@ function Mapper2.is_sink_port(::Type{<:KC}, p::Port, e::TE)
 
     # Check if this is a circuit_link. If so, preserve the destination index.
     if (e.metadata["preserve_dest"] && port_link_class == edge_link_class)
-        return e.metadata["dest_index"] == p.metadata["index"] 
+        return e.metadata["dest_index"] == p.metadata["index"]
     end
 
     return port_link_class == edge_link_class
@@ -73,7 +73,7 @@ mutable struct RankedNode{T} <: Mapper2.SA.Node
     maxheap_handle  ::Int64
 end
 
-function SA.move(sa::SAStruct{KC{true,true}}, index, spot)
+function SA.move(sa::SAStruct{KC{true}}, index, spot)
     node = sa.nodes[index]
     sa.grid[SA.location(node)] = 0
     SA.assign(node, spot)
@@ -91,7 +91,7 @@ end
 
 Swap two nodes in the placement structure.
 """
-function SA.swap(sa::SAStruct{KC{true,true}}, node1, node2)
+function SA.swap(sa::SAStruct{KC{true}}, node1, node2)
     # Get references to these objects to make life easier.
     n1 = sa.nodes[node1]
     n2 = sa.nodes[node2]
@@ -122,7 +122,7 @@ struct CostEdge <: Mapper2.SA.TwoChannel
     cost   ::Float64
 end
 
-function Mapper2.SA.build_node(::Type{<:KC{T,true}}, n::TaskgraphNode, x) where T
+function Mapper2.SA.build_node(::Type{<:KC{true}}, n::TaskgraphNode, x)
     rank = getrank(n).normalized_rank
     handle = n.metadata["heap_handle"]
     # Initialize all nodes to think they are the max ratio. Code for first move
@@ -131,12 +131,12 @@ function Mapper2.SA.build_node(::Type{<:KC{T,true}}, n::TaskgraphNode, x) where 
 end
 
 
-function Mapper2.SA.build_address_data(::Type{<:KC{T,true}}, c::Component) where T
+function Mapper2.SA.build_address_data(::Type{<:KC{true}}, c::Component)
     rank = getrank(c).normalized_rank
     return rank
 end
 
-function Mapper2.SA.build_channels(::Type{<:KC{true}}, edges, sources, sinks)
+function Mapper2.SA.build_channels(::Type{<:KC}, edges, sources, sinks)
     return map(zip(edges, sources, sinks)) do x
         edge,srcs,snks = x
         @assert length(srcs) == 1
@@ -149,24 +149,16 @@ function Mapper2.SA.build_channels(::Type{<:KC{true}}, edges, sources, sinks)
 end
 
 # Costed metric functions
-function Mapper2.SA.edge_cost(::Type{<:KC{true}}, sa::SAStruct, edge::CostEdge)
+function Mapper2.SA.edge_cost(::Type{<:KC}, sa::SAStruct, edge::CostEdge)
     src = getaddress(sa.nodes[edge.source])
     dst = getaddress(sa.nodes[edge.sink])
     return  edge.cost * sa.distance[src, dst]
 end
 
-function Mapper2.SA.aux_cost(::Type{<:KC{true,true}}, sa::SAStruct)
+function Mapper2.SA.aux_cost(::Type{<:KC{true}}, sa::SAStruct)
     return sa.aux.task_penalty_multiplier * top(sa.aux.ratio_max_heap)
 end
 
-# function Mapper2.SA.address_cost(::Type{<:KC{T,true}}, sa::SAStruct, node::SA.Node) where T
-#     # Get the frequency bin for the location of the node.
-#     component_rank = sa.address_data[SA.location(node)]
-#     # Find the ratio of node rank to core rank.
-#     ratio = node.rank / component_rank
-# 
-# 
-# end
 
 ################################################################################
 # Routing
@@ -181,7 +173,7 @@ end
 
 Base.isless(a::CostChannel, b::CostChannel) = a.cost < b.cost
 
-function Mapper2.routing_channel(::Type{<:KC{true}}, start, stop, edge)
+function Mapper2.routing_channel(::Type{<:KC}, start, stop, edge)
     cost = edge.metadata["cost"]
     return CostChannel(start, stop, cost)
 end

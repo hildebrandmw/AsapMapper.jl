@@ -11,13 +11,21 @@ struct DrawBox
     width       ::Float64
     height      ::Float64
     fill        ::Symbol    
-    core_bin    ::Float64
-    task_bin    ::Float64
+    core_bin    ::Union{Float64,Missing}
+    task_bin    ::Union{Float64,Missing}
 end
+
 getx(d::DrawBox) = [d.x, d.x + d.width, d.x + d.width, d.x, d.x]
 gety(d::DrawBox) = [d.y, d.y, d.y + d.height, d.y + d.height, d.y]
+
 lowerleft(d::DrawBox) = (d.x + d.width/4, d.y + d.height/4)
 upperright(d::DrawBox) = (d.x + 3*d.width/4, d.y + 3*d.height/4)
+
+utrianglex(d::DrawBox) = [d.x, d.x + d.width, d.x, d.x]
+utriangley(d::DrawBox) = [d.y, d.y, d.y + d.height, d.y]
+
+ltrianglex(d::DrawBox) = [d.x + d.width, d.x + d.width, d.x, d.x + d.width]
+ltriangley(d::DrawBox) = [d.y + d.height, d.y, d.y + d.height, d.y + d.height]
 
 struct DrawRoute
     x       ::Vector{Float64}
@@ -34,33 +42,49 @@ end
     grid   := false
     yflip  := true
 
-    # Plot boxes
-    seriestype := :shape
 
     # Find the maximum ratio.
     boxes = r.args[1]
-    rmax = maximum(box.task_bin / box.core_bin for box in boxes)
+
+    seriestype := :shape
+
+    # Draw triangles
+    for box in boxes
+        @series begin
+            x = ltrianglex(box)
+            y = ltriangley(box)
+
+            c := RGB(1.0 - box.core_bin,box.core_bin, 0)
+
+            x,y
+        end
+    end
+
+    for box in boxes
+        if !ismissing(box.task_bin)
+            @series begin
+                x = utrianglex(box)
+                y = utriangley(box)
+                c := RGB(1.0 - box.task_bin, box.task_bin, 0)
+                x,y
+            end
+        end
+    end
+
+    # Plot boxes
+    seriestype := :path
 
     for box in boxes
         @series begin
-            ratio = box.task_bin / box.core_bin
+            linecolor := :black
 
-            if ratio == rmax
-                c := :yellow
-            elseif box.task_bin == 1.0
-                c := :red
-            elseif box.core_bin == 1.0
-                c := :blue
-            else
-                # Set fill color
-                c := box.fill
-            end
             # Get x,y coordinates from box
             x = getx(box)
             y = gety(box)
             x, y
         end
     end
+
 
     seriestype := :path
     linewidth  := 2
@@ -69,7 +93,7 @@ end
     routes = r.args[2]
     for route in routes
         @series begin
-            linecolor := route.color
+            linecolor := :black
             x = route.x
             y = route.y
             x,y
@@ -78,6 +102,7 @@ end
 
     # Plot annotations
 
+    #=
     # Set up a transparent scatter plot
     seriestype          := :scatter
     markerstrokecolor   := RGBA(0,0,0,0.) 
@@ -119,6 +144,7 @@ end
 
         x,y 
     end
+    =#
 end
 
 function getboxes(m::Map{A,2}, spacing, tilesize) where A
@@ -143,10 +169,16 @@ function getboxes(m::Map{A,2}, spacing, tilesize) where A
         if MapperCore.isused(m, addr)
             fill = :cyan
             task = MapperCore.gettask(m, addr)
-            task_bin = getrank(task).normalized_rank
+
+            task_rank = getrank(task)
+            if ismissing(task_rank)
+                task_bin = missing
+            else
+                task_bin = task_rank.normalized_rank
+            end
         else
             fill = :white
-            task_bin = -1.0
+            task_bin = missing
         end
 
         core_bin = round(Mapper2.get_metadata!(child, "rank").normalized_rank, 2)
