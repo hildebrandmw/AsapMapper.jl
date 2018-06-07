@@ -38,15 +38,21 @@ const MTypes = @NT(
     input       = "input_handler",
     output      = "output_handler",
     memory      = memory_meta,
+    # Experimental high-performance vs low-power processor cores.
+    lowpower   = "low_power",
+    highperformance = "high_performance",
 )
 
 typekey() = "mapper_type"
 
 ismappable(c::AbstractComponent)    = haskey(c.metadata, typekey())
+
 isproc(c::AbstractComponent)        = ismappable(c) && in(MTypes.proc, c.metadata[typekey()])
 ismemoryproc(c::AbstractComponent)  = ismappable(c) && in(MTypes.memoryproc, c.metadata[typekey()])
 isinput(c::AbstractComponent)       = ismappable(c) && in(MTypes.input, c.metadata[typekey()])
 isoutput(c::AbstractComponent)      = ismappable(c) && in(MTypes.output, c.metadata[typekey()])
+islowpower(c::AbstractComponent)     = ismappable(c) && in(MTypes.lowpower, c.metadata[typekey()])
+ishighperformance(c::AbstractComponent) = ismappable(c) && in(MTypes.highperformance, c.metadata[typekey()])
 
 function ismemory(c::AbstractComponent)
     ismappable(c) || return false
@@ -77,6 +83,9 @@ end
 input_handler_metadata() = Dict{String,Any}(typekey() => [MTypes.input])
 output_handler_metadata() = Dict{String,Any}(typekey() => [MTypes.output])
 
+add_lowpower(c::Component) = push!(c.metadata[typekey()], MTypes.lowpower)
+add_highperformance(c::Component) = push!(c.metadata[typekey()], MTypes.highperformance)
+
 ################################################################################
 # Metadata for Taskgraph Nodes
 ################################################################################
@@ -88,6 +97,9 @@ make_output!(t::TN)      = (t.metadata[typekey()] = MTypes.output)
 make_proc!(t::TN)        = (t.metadata[typekey()] = MTypes.proc)
 make_memoryproc!(t::TN)  = (t.metadata[typekey()] = MTypes.memoryproc)
 make_memory!(t::TN, ports::Integer) = t.metadata[typekey()] = MTypes.memory(ports)
+# low-power high-performance stuff
+make_lowpower(t::TN) = (t.metadata[typekey()] = MTypes.lowpower)
+make_highperformance(t::TN) = (t.metadata[typekey()] = MTypes.highperformance)
 
 # Getting task -> core requirements.
 ismappable(t::TN)   = true
@@ -96,6 +108,9 @@ isoutput(t::TN)     = t.metadata[typekey()] == MTypes.output
 isproc(t::TN)       = t.metadata[typekey()] == MTypes.proc
 ismemoryproc(t::TN) = t.metadata[typekey()] == MTypes.memoryproc
 ismemory(t::TN)     = ismemory(t.metadata[typekey()])
+# low-power high performance stuff
+islowpower(t::TN) = t.metadata[typekey()] == MTypes.lowpower
+ishighperformance(t::TN) = t.metadata[typekey()] == MTypes.highperformance
 
 # Setting task -> core preference.
 mutable struct TaskRank

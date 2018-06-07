@@ -95,11 +95,11 @@ include("Metadata.jl")
 
 # Architectures
 include("cad_models/cad_models.jl")
-include("experimental_models/experimental_models.jl")
+#include("experimental_models/experimental_models.jl")
 #include("models/models.jl")
 
 # Include files
-include("PM_Interface.jl")
+include("PM_Interface/PM_Interface.jl")
 include("Mapper2_Interface.jl")
 
 # For communication with the project manager
@@ -107,9 +107,8 @@ include("Dump.jl")
 
 # Customize placement/routing plus architectures.
 include("PNR.jl")
-#include("experiments/Experiments.jl")
 
-#include("Plots.jl")
+include("Plots.jl")
 
 ################################################################################
 # Useful for testing and debugging

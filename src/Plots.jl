@@ -46,37 +46,38 @@ end
     # Find the maximum ratio.
     boxes = r.args[1]
 
-    seriestype := :shape
+    # seriestype := :shape
 
-    # Draw triangles
-    for box in boxes
-        @series begin
-            x = ltrianglex(box)
-            y = ltriangley(box)
+    # # Draw triangles
+    # for box in boxes
+    #     @series begin
+    #         x = ltrianglex(box)
+    #         y = ltriangley(box)
 
-            c := RGB(1.0 - box.core_bin,box.core_bin, 0)
+    #         c := RGB(1.0 - box.core_bin,box.core_bin, 0)
 
-            x,y
-        end
-    end
+    #         x,y
+    #     end
+    # end
 
-    for box in boxes
-        if !ismissing(box.task_bin)
-            @series begin
-                x = utrianglex(box)
-                y = utriangley(box)
-                c := RGB(1.0 - box.task_bin, box.task_bin, 0)
-                x,y
-            end
-        end
-    end
+    # for box in boxes
+    #     if !ismissing(box.task_bin)
+    #         @series begin
+    #             x = utrianglex(box)
+    #             y = utriangley(box)
+    #             c := RGB(1.0 - box.task_bin, box.task_bin, 0)
+    #             x,y
+    #         end
+    #     end
+    # end
 
     # Plot boxes
-    seriestype := :path
+    seriestype := :shape
 
     for box in boxes
         @series begin
-            linecolor := :black
+            #linecolor := :black
+            c := box.fill
 
             # Get x,y coordinates from box
             x = getx(box)
@@ -93,7 +94,7 @@ end
     routes = r.args[2]
     for route in routes
         @series begin
-            linecolor := :black
+            linecolor := route.color
             x = route.x
             y = route.y
             x,y
