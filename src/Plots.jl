@@ -15,26 +15,38 @@ struct DrawBox
     task_bin    ::Union{Float64,Missing}
 end
 
+# ------- #
+# Methods #
+# ------- #
+
+# Given a box, give X and Y vectors to trace the outline of the box.
 getx(d::DrawBox) = [d.x, d.x + d.width, d.x + d.width, d.x, d.x]
 gety(d::DrawBox) = [d.y, d.y, d.y + d.height, d.y + d.height, d.y]
 
+# Pointers to corners in the box. Useful for printing text in the upper left
+# or lower right.
 lowerleft(d::DrawBox) = (d.x + d.width/4, d.y + d.height/4)
 upperright(d::DrawBox) = (d.x + 3*d.width/4, d.y + 3*d.height/4)
 
+# Methds for getting upper right/lower left triangles for a box. Was 
+# experimenting with using color to represent various frequency values and core
+# values. This didn't really work so well.
 utrianglex(d::DrawBox) = [d.x, d.x + d.width, d.x, d.x]
 utriangley(d::DrawBox) = [d.y, d.y, d.y + d.height, d.y]
-
 ltrianglex(d::DrawBox) = [d.x + d.width, d.x + d.width, d.x, d.x + d.width]
 ltriangley(d::DrawBox) = [d.y + d.height, d.y, d.y + d.height, d.y + d.height]
 
+# Encoding for a route through the architecture.
 struct DrawRoute
     x       ::Vector{Float64}
     y       ::Vector{Float64}
     color   ::Symbol
 end
 
+# --------------- #
+# Plotting Recipe #
+# --------------- #
 @userplot RoutePlot
-
 @recipe function f(r::RoutePlot)
     # Set up plot attributes
     legend := false

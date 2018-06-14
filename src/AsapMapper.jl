@@ -103,10 +103,11 @@ include("PM_Interface/PM_Interface.jl")
 include("Mapper2_Interface.jl")
 
 # For communication with the project manager
-include("Dump.jl")
+#include("Dump.jl")
 
 # Customize placement/routing plus architectures.
 include("PNR.jl")
+include("IP_Router/Router.jl")
 
 include("Plots.jl")
 
