@@ -108,8 +108,9 @@ include("Mapper2_Interface.jl")
 # Customize placement/routing plus architectures.
 include("PNR.jl")
 include("IP_Router/Router.jl")
+include("Experiments.jl")
 
-include("Plots.jl")
+#include("Plots.jl")
 
 ################################################################################
 # Useful for testing and debugging

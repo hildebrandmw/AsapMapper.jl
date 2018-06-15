@@ -94,19 +94,43 @@ using ProgressMeter
 import Mapper2.Routing
 using Mapper2.Helper
 
-
+# This is not necessarily scalable to an arbitrary number of layers, or
+# interconnect topology.
 @enum Network layer_0 layer_1 memory_request memory_return
 
 struct AddressCircuit
-    address::Address{2}
-    network::Network
+    address :: Address{2}
+    network :: Network
 end
 
 address(a::AddressCircuit) = a.address
 getnetwork(a::AddressCircuit) = a.network
 
-
 function iproute(m::Map{A,2}) where {A}
+    # Constuct model
+    ip_model, struct_time, struct_bytes, _, _ = @timed build_ip_model(m)
+    # Solve the model
+    status, solve_time, solve_bytes, _, _ = @timed solve(ip_model)
+
+    m.metadata["ip_route_struct_time"] = struct_time
+    m.metadata["ip_route_struct_bytes"] = struct_bytes
+    m.metadata["ip_route_total_time"] = solve_time
+    m.metadata["ip_route_solve_bytes"] = solve_bytes
+    m.metadata["ip_route_objective"] = getobjectivevalue(ip_model) 
+    m.metadata["ip_route_solve_time"] = getsolvetime(ip_model)
+
+    if status == :Optimal
+        m.metadata["ip_optimal"] = true
+    else
+        m.metadata["ip_opcimal"] = false
+    end
+
+    m.metadata["ip_status"] = status
+
+    return m
+end
+
+function build_ip_model(m::Map{A,2}) where A
     # Build the network data type.
     network = build_network(m)
 
@@ -118,6 +142,9 @@ function iproute(m::Map{A,2}) where {A}
     # (nodes in the network) that we need.
     vertices_for_taskgraph_edge = Vector{Int}[]
 
+    # Amount to grow the bounding box around the extrema of the source-sink
+    # pair. This helps keep the number of generated variables down without
+    # hurting routing. Keep somewhere between 2 and 4.
     box_growth = 3
 
     # Collection of vertices used for each edge in the taskgraph.
@@ -188,6 +215,9 @@ function iproute(m::Map{A,2}) where {A}
     # Add flow constraints. For start and stop edges, make sure the 
     # outgoing/incoming sum is 1.
     #
+    # Must also ensure that flow out of a sink node and into a source node are
+    # zero to avoid out->in loops.
+    #
     # For all other edges, incoming flow must equal outgoing flow.
     
     for i in 1:num_edges
@@ -225,23 +255,6 @@ function iproute(m::Map{A,2}) where {A}
         # Add capacity constraint.
         @constraint(ip_model, sum(x[i, source, dest] for i in indices) <= 1)
     end
-
-    # Sovle the model
-    solve(ip_model)
-    # histogram = SortedDict{Float64, Int}()
-    # for i in 1:num_edges
-    #     for j in vertex_collection[i]
-    #         for k in outneighbors(network, j)
-    #             in(k, vertex_collection[i]) || continue
-    #             #if getvalue(x[i,j,k]) > 0
-    #             #    println(address(getdata(network, j)), " => ", address(getdata(network, k)))
-    #             #end
-    #         end
-    #     end
-    #     println()
-    # end
-
-    #display(histogram)
 
     return ip_model
 end

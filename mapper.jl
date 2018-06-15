@@ -29,6 +29,7 @@ function print_help()
           """)
 end
 
+# NOTE: This is probably no-longer needed.
 function main()
     # print help message.
     for arg in ARGS
