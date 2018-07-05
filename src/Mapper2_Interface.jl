@@ -7,7 +7,7 @@ Specifically:
         mappability.
 
     - Custom placement TwoChannel edge that contains a "cost" field for
-        annotating important links. Also provides a custom "edge_cost" method
+        annotating important links. Also provides a custom "channel_cost" method
         for this new type of link.
 
     - Custom routing channel with a cost field.
@@ -79,30 +79,30 @@ end
 # Placement
 ################################################################################
 
-# All edges for KC types will be "CostEdge". Even if the profiled_links option
+# All edges for KC types will be "CostChannel". Even if the profiled_links option
 # is not being used, links between memories and memory_processors will still
 # be given a higher weight to encourage them to be mapped together.
 #
 # The main difference here is the "cost" field, which will be multiplied by
 # the distance between nodes to emphasize some connections over others.
-struct CostEdge <: Mapper2.SA.TwoChannel
+struct CostChannel <: Mapper2.SA.TwoChannel
     source ::Int64
     sink   ::Int64
     cost   ::Float64
 end
 
-# Extend the "edge_cost" function for KC types.
-function Mapper2.SA.edge_cost(::Type{<:KC}, sa::SAStruct, edge::CostEdge)
-    src = getaddress(sa.nodes[edge.source])
-    dst = getaddress(sa.nodes[edge.sink])
-    return  edge.cost * sa.distance[src, dst]
+# Extend the "channel_cost" function for KC types.
+function Mapper2.SA.channel_cost(::Type{<:KC}, sa::SAStruct, channel::CostChannel)
+    src = getaddress(sa.nodes[channel.source])
+    dst = getaddress(sa.nodes[channel.sink])
+    return  channel.cost * sa.distance[src, dst]
 end
 
-# Constructor for CostEdges. Extracts the "cost" field from the metadata
-# of each taskgraph edge type.
-function Mapper2.SA.build_channels(::Type{<:KC}, edges, sources, sinks)
-    return map(zip(edges, sources, sinks)) do x
-        edge,srcs,snks = x
+# Constructor for CostChannel. Extracts the "cost" field from the metadata
+# of each taskgraph channel type.
+function Mapper2.SA.build_channels(::Type{<:KC}, channel, sources, sinks)
+    return map(zip(channel, sources, sinks)) do x
+        channel,srcs,snks = x
 
         # Quick verification that no fanout is happening. This should never
         # happen for normal KiloCore mappings.
@@ -113,8 +113,8 @@ function Mapper2.SA.build_channels(::Type{<:KC}, edges, sources, sinks)
         # source and sink simply by taking the first element.
         source = first(srcs)
         sink = first(snks)
-        cost = edge.metadata["cost"]
-        return CostEdge(source,sink,cost)
+        cost = channel.metadata["cost"]
+        return CostChannel(source,sink,cost)
     end
 end
 
@@ -133,8 +133,9 @@ end
 # nodes and cores.
 mutable struct RankedNode{T} <: Mapper2.SA.Node
     location    ::T
-    out_edges   ::Vector{Int64}
-    in_edges    ::Vector{Int64}
+    class :: Int64
+    outchannels   ::Vector{Int64}
+    inchannels    ::Vector{Int64}
     # Normalized rank and derivative
     rank            ::Float64
     maxheap_handle  ::Int64
@@ -182,12 +183,12 @@ function SA.swap(sa::SAStruct{KC{true, false}}, node1, node2)
 end
 
 # Constructor for RankedNodes.
-function Mapper2.SA.build_node(::Type{KC{true, false}}, n::TaskgraphNode, x)
+function Mapper2.SA.buildnode(::Type{KC{true, false}}, n::TaskgraphNode, x)
     rank = getrank(n).normalized_rank
     handle = n.metadata["heap_handle"]
     # Initialize all nodes to think they are the max ratio. Code for first move
     # operation will figure out which one is really the maximum.
-    return RankedNode(x, Int64[], Int64[], rank, handle)
+    return RankedNode(x, 0, Int64[], Int64[], rank, handle)
 end
 
 # Get the address data for each node.
@@ -221,7 +222,7 @@ mutable struct HeterogenousNode{T} <: Mapper2.SA.Node
     class       :: NodeClass
 end
 
-function Mapper2.SA.build_node(::Type{KC{false,true}}, n::TaskgraphNode, x)
+function Mapper2.SA.buildnode(::Type{KC{false,true}}, n::TaskgraphNode, x)
     if islowpower(n)
         class = low_power
     else
@@ -262,15 +263,15 @@ end
 ################################################################################
 
 # Custom Channels
-struct CostChannel <: AbstractRoutingChannel
+struct CostRoutingChannel <: AbstractRoutingChannel
     start_vertices   ::Vector{Vector{Int64}}
     stop_vertices    ::Vector{Vector{Int64}}
     cost             ::Float64
 end
 
-Base.isless(a::CostChannel, b::CostChannel) = a.cost < b.cost
+Base.isless(a::CostRoutingChannel, b::CostRoutingChannel) = a.cost < b.cost
 
 function Mapper2.routing_channel(::Type{<:KC}, start, stop, edge)
     cost = edge.metadata["cost"]
-    return CostChannel(start, stop, cost)
+    return CostRoutingChannel(start, stop, cost)
 end

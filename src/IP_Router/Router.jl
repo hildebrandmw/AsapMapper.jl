@@ -191,8 +191,10 @@ function build_ip_model(m::Map{A,2}) where A
         end
 
         # Get the source and sink vertices for this layer.
-        push!(source_collection, getvertices(network, source_address, links))
-        push!(sink_collection, getvertices(network, sink_address, links))
+        local_source = getvertices(network, source_address, links)
+        local_sink = getvertices(network, sink_address, links)
+        push!(source_collection, local_source)
+        push!(sink_collection, local_sink)
 
         # Now, collect all vertices that are within the bounding box 
         local_vertices = Int[]
@@ -201,6 +203,7 @@ function build_ip_model(m::Map{A,2}) where A
         end
         push!(vertex_collection, local_vertices)
     end
+
 
     # We are now ready to generate the IP model.
     @variable(ip_model, 

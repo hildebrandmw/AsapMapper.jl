@@ -28,7 +28,7 @@ const _special_attributes = Set([
 
 # Function to unify mapper types cleanly between tasks and cores.
 memory_meta(ports::Int) = "memory_$(ports)port"
-ismemory(s::String) = startswith(s, "memory")
+ismemory(s::String) = startswith(s, "memory") && endswith(s, "port")
 ismemory(x) = false
 
 # Global NT for dealing with attributes.

@@ -58,31 +58,6 @@ end
     # Find the maximum ratio.
     boxes = r.args[1]
 
-    # seriestype := :shape
-
-    # # Draw triangles
-    # for box in boxes
-    #     @series begin
-    #         x = ltrianglex(box)
-    #         y = ltriangley(box)
-
-    #         c := RGB(1.0 - box.core_bin,box.core_bin, 0)
-
-    #         x,y
-    #     end
-    # end
-
-    # for box in boxes
-    #     if !ismissing(box.task_bin)
-    #         @series begin
-    #             x = utrianglex(box)
-    #             y = utriangley(box)
-    #             c := RGB(1.0 - box.task_bin, box.task_bin, 0)
-    #             x,y
-    #         end
-    #     end
-    # end
-
     # Plot boxes
     seriestype := :shape
 
@@ -112,52 +87,6 @@ end
             x,y
         end
     end
-
-    # Plot annotations
-
-    #=
-    # Set up a transparent scatter plot
-    seriestype          := :scatter
-    markerstrokecolor   := RGBA(0,0,0,0.) 
-    seriescolor         := RGBA(0,0,0,0.)
-    @series begin
-        x = Float64[]
-        y = Float64[]
-        core_bins = String[]
-        for box in boxes
-            box_x, box_y = lowerleft(box)
-            push!(x, box_x)
-            push!(y, box_y)
-            push!(core_bins, string(box.core_bin))
-        end
-
-        # Annotate image with frequency values
-        series_annotations := Plots.series_annotations(core_bins, Plots.font("sans", 2))
-
-        x,y 
-    end
-
-    # Task bins
-    @series begin
-        x = Float64[]
-        y = Float64[]
-        task_bins = String[]
-        for box in boxes
-            bin = box.task_bin
-            bin == -1.0 && continue
-
-            box_x, box_y = upperright(box)
-            push!(x, box_x)
-            push!(y, box_y)
-            push!(task_bins, string(round(bin, 2)))
-        end
-
-        # Annotate image with frequency values
-        series_annotations := Plots.series_annotations(task_bins, Plots.font("sans", 2))
-
-        x,y 
-    end
-    =#
 end
 
 function getboxes(m::Map{A,2}, spacing, tilesize) where A

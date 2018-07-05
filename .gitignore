@@ -7,3 +7,5 @@ apps/*
 *.png
 *.json
 scratchpad.jl
+*.jdb
+done.txt

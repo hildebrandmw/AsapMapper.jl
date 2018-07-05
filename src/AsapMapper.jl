@@ -13,8 +13,6 @@ using DataStructures
 # Set up directory paths
 const SRCDIR = @__DIR__
 const PKGDIR = dirname(SRCDIR)
-const RESULTS = joinpath(PKGDIR, "results")
-const APPS    = joinpath(PKGDIR, "apps")
 
 set_logging(level) = configure_logging(AsapMapper, min_level=level)
 
@@ -110,7 +108,7 @@ include("PNR.jl")
 include("IP_Router/Router.jl")
 include("Experiments.jl")
 
-#include("Plots.jl")
+#include("Plots/MappingPlots.jl")
 
 ################################################################################
 # Useful for testing and debugging

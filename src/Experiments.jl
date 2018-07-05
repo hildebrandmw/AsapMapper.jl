@@ -5,18 +5,17 @@ function experiment_1(input_file)
     # Build the PM Constructor from the input file name.
     pm_constructor = PMConstructor(input_file)
 
-    move_attempts = [10000, 20000, 50000, 100000, 200000]
+    move_attempts = [20000, 50000, 100000, 200000]
     limits        = [0.20, 0.30, 0.40, 0.44, 0.50]
-    movegens      = [:random, :sub_random]
-
+    movegens      = [:search, :cached]
     results = []
 
     for (moves, limit, movegen) in Iterators.product(move_attempts, limits, movegens)
         # Instantiate the move generator to use.
-        if movegen == :random
-            move_generator = SA.RandomGenerator{2}()
+        if movegen == :search
+            move_generator = SA.SearchMoveGenerator()
         else
-            move_generator = SA.SubRandomGenerator{2}()
+            move_generator = SA.CachedMoveGenerator{CartesianIndex{2}}()
         end
 
         # Make a kwargs dict to pass to placement.
@@ -24,7 +23,7 @@ function experiment_1(input_file)
         kwargs_dict = Dict(
             :move_attempts  => moves,
             :limiter        => SA.DefaultSALimit(limit),
-            :move_gen       => move_generator,
+            :movegen       => move_generator,
         )
 
         # Run place and route.
@@ -39,12 +38,17 @@ function experiment_1(input_file)
         )
 
         push!(results, result_dict)
+
+        # Create a name for this file and save it.
+        open("results_$input_file", "w") do f
+            JSON.print(f, results, 2)
+        end
     end
 
-    # Create a name for this file and save it.
-    open("results_$input_file", "w") do f
-        JSON.print(f, results, 2)
+    open("done.txt", "w") do f
+        print(f, "Yay!")
     end
+
 end
 
 
@@ -61,9 +65,9 @@ function multi_pnr_with_ip_route(c::PMConstructor, num_maps::Int, kwargs_dict)
 
     # Do IP routing serially to avoids problems with Gurobi interfering with
     # itself.
-    for m in maps
-        iproute(m)
-    end
+    # for m in maps
+    #     iproute(m)
+    # end
 
     # Just return the metadata dicts. Should have time, memory-allocations,
     # and objective values stored.
