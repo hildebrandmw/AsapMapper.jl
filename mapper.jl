@@ -18,12 +18,10 @@ function print_help()
     print("""
           usage: mapper.jl [-h] architecture input_file output_file
                  mapper.jl
-
           positional arguments:
             architecture:   The architecture to map to. Can be `asap3` or `asap4`.
             input_file:     Path to the input JSON file.
             output_file:    Path to the output JSON file.
-
           If no arguments are given, running this script only configures the
           Julia run-time to be aware of the AsapMapper and Mapper2 packages.
           """)

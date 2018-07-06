@@ -26,36 +26,6 @@ function readresults(s)
     end
 end
 
-# Struct for navigating through hierarchical dictionaries.
-struct KeyChain
-    keys::Vector{String}
-end
-
-# Macro to create a KeyChain from a string macro
-#
-# k"a/b/c" == KeyChain(["a", "b", "c"])
-macro k_str(s)
-    return KeyChain(split(s, "/"))
-end
-
-Base.convert(::Type{KeyChain}, s::String) = KeyChain([s])
-
-# Access a dictionary with a KeyChain
-function Base.getindex(d::Dict{String}, k::KeyChain)
-    for key in k.keys
-        d = d[key]
-    end
-    return d
-end
-
-function Base.haskey(d::Dict{String}, k::KeyChain)
-    for key in k.keys
-        !haskey(d, key) && return false
-        d = d[key]
-    end
-    return true
-end
-
 ################################################################################
 # Singleton types to control dispatch to various plot generation functions.
 abstract type AbstractPlotType end
@@ -71,6 +41,7 @@ struct BoxPlot <: AbstractPlotType end
     ylabel :: String = ""
 end
 
+# All the color keywords recognized by PGFPlots. Taken from the manual - page 191.
 colors() = (
     "red",
     "green",

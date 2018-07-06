@@ -1,3 +1,45 @@
+# Set of applications to test.
+apps() = (
+    # AES flavors
+    ("AES_v1", ["-lanes" => 1, "-sim_off", "-gui_off"]),
+    ("AES_v1", ["-lanes" => 2, "-sim_off", "-gui_off"]),
+    ("AES_v1", ["-lanes" => 3, "-sim_off", "-gui_off"]),
+    ("AES_v1", ["-lanes" => 4, "-sim_off", "-gui_off"]),
+    ("AES_v1", ["-lanes" => 5, "-sim_off", "-gui_off"]),
+    ("AES_v1", ["-lanes" => 6, "-sim_off", "-gui_off"]),
+    ("AES_v1", ["-lanes" => 7, "-sim_off", "-gui_off"]),
+
+    # FFT v5
+    ("FFT_v5", ["-sim_off", "-gui_off"]),
+
+    # FFT_v3
+    ("FFT_v3", ["-lanes" => 1, "-sim_off", "-gui_off"]),
+    ("FFT_v3", ["-lanes" => 2, "-sim_off", "-gui_off"]),
+    ("FFT_v3", ["-lanes" => 3, "-sim_off", "-gui_off"]),
+    ("FFT_v3", ["-lanes" => 4, "-sim_off", "-gui_off"]),
+    ("FFT_v3", ["-lanes" => 5, "-sim_off", "-gui_off"]),
+    ("FFT_v3", ["-lanes" => 6, "-sim_off", "-gui_off"]),
+    ("FFT_v3", ["-lanes" => 7, "-sim_off", "-gui_off"]),
+
+    # Sorting
+    ("Main_Snakesort", ["-num_sorters"=>400, "-sim_off", "-gui_off"]),
+    ("Main_Rowsort", ["-num_rows"=>20, "-num_sorters_per_row"=>40, "-sim_off", "-gui_off"]),
+)
+
+function loadapps()
+    for (app, args) in apps()
+        loadtaskgraph(app, args)
+    end
+end
+
+function initapps()
+    for (app, args) in apps()
+        initgen(app, args)
+    end
+end
+
+
+
 # Vary move attempts and move limiter.
 # Move attempts to try: 10000, 20000, 50000, 100000, 200000
 # Limit: try .20, .30, .40, .44, .50

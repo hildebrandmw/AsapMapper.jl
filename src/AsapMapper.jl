@@ -3,16 +3,19 @@ module AsapMapper
 const is07 = VERSION > v"0.7.0-"
 
 using Mapper2
-using IterTools, JSON, GZip
+using IterTools
+using JSON
 using Missings
 is07 ? (using Logging) : (using MicroLogging)
 using NamedTuples
 using Compat
 using DataStructures
+using JuliaDB
 
 # Set up directory paths
 const SRCDIR = @__DIR__
 const PKGDIR = dirname(SRCDIR)
+const DBDIR = joinpath(PKGDIR, "db")
 
 set_logging(level) = configure_logging(AsapMapper, min_level=level)
 
@@ -100,13 +103,13 @@ include("cad_models/cad_models.jl")
 include("PM_Interface/PM_Interface.jl")
 include("Mapper2_Interface.jl")
 
-# For communication with the project manager
-#include("Dump.jl")
-
 # Customize placement/routing plus architectures.
 include("PNR.jl")
-include("IP_Router/Router.jl")
+
+#include("IP_Router/Router.jl")
 include("Experiments.jl")
+
+include("Database.jl")
 
 #include("Plots/MappingPlots.jl")
 
