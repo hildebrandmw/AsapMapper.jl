@@ -4,12 +4,12 @@ const _options_path_ = KeyChain(("mapper_options",))
 # Don't rank input or output nodes.
 isnonranking(t) = isinput(t) || isoutput(t)
 
-struct PMConstructor <: MapConstructor
-    file    ::String
+struct PMConstructor{T <: Union{String,Dict}} <: MapConstructor
+    file    ::T
     options ::Dict{Symbol,Any}
 
     #--inner constructor
-    function PMConstructor(file::String, options = Dict{Symbol,Any}())
+    function PMConstructor(file::T, options = Dict{Symbol,Any}()) where T
         # Iterate through each opion in "kwargs" - ensure it is in the list of
         # options provided by "_defult_options_"
         default_options = _get_default_options()
@@ -18,7 +18,7 @@ struct PMConstructor <: MapConstructor
                 error("Unrecognized Mapper Override option $(key).")
             end
         end
-        return new(file, options)
+        return new{T}(file, options)
     end
 end
 
@@ -137,7 +137,7 @@ function _get_default_options()
       )
 end
 
-function Base.parse(c::PMConstructor)
+function Base.parse(c::PMConstructor{String})
     json_dict = open(c.file, "r") do f
         JSON.parse(f)
     end
@@ -151,6 +151,13 @@ function Base.parse(c::PMConstructor)
     return json_dict
 end
 
+function Base.parse(c::PMConstructor{<:Dict})
+    dict = c.file
+    final_options = parse_options(c.options, dict["mapper_options"])
+    dict["mapper_options"] = final_options
+    return dict
+end
+
 """
     parse_options(internal::Dict, external::Dict)
 
@@ -160,7 +167,7 @@ dictionary with the following option precedences from highest to lowest:
 
 `internal`, `external`, `default`.
 """
-function parse_options(internal::Dict{Symbol,Any}, external::Dict{String,Any})
+function parse_options(internal::Dict{Symbol,Any}, external::Dict)
     # Convert the keys of 'external' to symbols for uniformity.
     external_sym = Dict(Symbol(k) => v for (k,v) in external)
 

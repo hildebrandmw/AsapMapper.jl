@@ -92,10 +92,17 @@ struct CostChannel <: Mapper2.SA.TwoChannel
 end
 
 # Extend the "channel_cost" function for KC types.
-function Mapper2.SA.channel_cost(::Type{<:KC}, sa::SAStruct, channel::CostChannel)
+Base.@propagate_inbounds function Mapper2.SA.channel_cost(
+        ::Type{<:KC}, 
+        sa::SAStruct, 
+        channel::CostChannel
+    )
+
     src = getaddress(sa.nodes[channel.source])
     dst = getaddress(sa.nodes[channel.sink])
-    return  channel.cost * sa.distance[src, dst]
+    distance = sa.distance[src, dst]
+
+    return channel.cost * distance
 end
 
 # Constructor for CostChannel. Extracts the "cost" field from the metadata

@@ -10,7 +10,6 @@ is07 ? (using Logging) : (using MicroLogging)
 using NamedTuples
 using Compat
 using DataStructures
-using JuliaDB
 
 # Set up directory paths
 const SRCDIR = @__DIR__
@@ -43,7 +42,10 @@ export  place_and_route,
         SharedPlacementResult,
         # Misc
         FunctionCall,
-        call
+        call,
+        # Project Manger interface
+        PMConstructor,
+        build_map
 
 # Helper Functions
 function oneofin(a,b)
@@ -64,7 +66,6 @@ abstract type MapConstructor end
 ################################################################################
 # Custom Architecture used by this Framework
 ################################################################################
-
 
 # Invariants on the type:
 #
@@ -107,11 +108,8 @@ include("Mapper2_Interface.jl")
 include("PNR.jl")
 
 #include("IP_Router/Router.jl")
-include("Experiments.jl")
 
-include("Database.jl")
-
-#include("Plots/MappingPlots.jl")
+include("Plots/MappingPlots.jl")
 
 ################################################################################
 # Useful for testing and debugging
