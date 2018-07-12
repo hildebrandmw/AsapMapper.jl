@@ -205,12 +205,9 @@ end
 ################################################################################
 # Functions for connecting processors, IO, and memories together
 ################################################################################
+squash(x) = reshape(x, :)
 function connect_processors(tl, num_links)
-
-    vals = [MTypes.proc, MTypes.input, MTypes.output]
-    fn = x -> search_metadata!(x, typekey(), vals, oneofin)
-    src_rule = fn
-    dst_rule = fn
+    fn = x -> search_metadata!(x, typekey(), MTypes.proc, in)
 
     # Build metadata dictionary for capacity and cost
     metadata = Dict(
@@ -219,56 +216,54 @@ function connect_processors(tl, num_links)
         "link_class"    => "circuit_link"
     )
 
-    # Create offset rules.
-    offsets = [CartesianIndex(-1,0),
-               CartesianIndex(1,0),
-               CartesianIndex(0,1),
-               CartesianIndex(0,-1)]
-    #=
-    Create two tuples for the source ports and destination ports. In general,
-    if the source link is going out of the north port, the destionation will
-    be coming in the south port.
-    =#
-    src_dirs = ("north", "south", "east", "west")
-    dst_dirs = ("south", "north", "west", "east")
+    offset_skeleton = (
+        ( (-1, 0), "north", "south"),
+        ( ( 1, 0), "south", "north"),
+        ( ( 0, 1), "east",  "west"),
+        ( ( 0,-1), "west",  "east"),
+    )
 
-    src_ports = [["$(src)_out[$i]" for i in 0:num_links-1] for src in src_dirs]
-    dst_ports = [["$(dst)_in[$i]" for i in 0:num_links-1] for dst in dst_dirs]
+    offsets = squash([
+        Offset(a, "$(b)_out[$i]", "$(c)_in[$i]") 
+        for (a,b,c) in offset_skeleton, i in 0:num_links
+    ])
 
-    offset_rules = []
-    for (o,s,d) in zip(offsets, src_ports, dst_ports)
-        rules = [(o,i,j) for (i,j) in zip(s,d)]
-        append!(offset_rules, rules)
-    end
+    rule = ConnectionRule(
+        offsets,
+        source_filter = fn,
+        dest_filter = fn,
+    )
 
-    connection_rule(tl, offset_rules, src_rule, dst_rule, metadata = metadata)
+    connection_rule(tl, offsets, metadata = metadata)
+
 end
 
 function connect_io(tl, num_links)
 
     vals = [MTypes.proc, MTypes.input, MTypes.output]
     fn = x -> search_metadata!(x, typekey(), vals, oneofin)
-    src_rule = fn
-    dst_rule = fn
 
-    src_dirs = ("east","west")
-    dst_dirs = ("west","east")
-    # Links can go both directions, so make the offsets an array
-    offsets = [CartesianIndex(0,1), CartesianIndex(0,-1)]
+    offset_skeletons = (
+        ( ( 0, 1), "east", "west"),
+        ( ( 0,-1), "west", "east"),
+    )
 
-    offset_rules = []
-    for offset in offsets
-        for (src,dst) in zip(src_dirs, dst_dirs)
-            src_ports = ["out[$i]" for i in 0:num_links-1]
-            append!(src_ports, ["$(src)_out[$i]" for i in 0:num_links-1])
+    input_rules = squash([
+        Offset(a, "out[$i]", "$(c)_in[$i]")
+        for (a,b,c) in offset_skeletons, i in 0:num_links-1
+    ])
 
-            dst_ports = ["$(dst)_in[$i]" for i in 0:num_links-1]
-            append!(dst_ports, ["in[$i]" for i in 0:num_links-1])
-            
-            new_rule = [(offset, s, d) for (s,d) in zip(src_ports, dst_ports)]
-            append!(offset_rules, new_rule)
-        end
-    end
+    output_rules = squash([
+        Offset(a, "$(b)_out[$i]", "in[$i]")
+        for (a,b,c) in offset_skeletons, i in 0:num_links-1
+    ])
+
+    rule = ConnectionRule(
+        vcat(input_rules, output_rules),
+        source_filter = fn,
+        dest_filter = fn,
+    )
+
     # Build metadata dictionary for capacity and cost
     metadata = Dict(
         "cost"          => 1.0,
@@ -276,8 +271,7 @@ function connect_io(tl, num_links)
         "link_class"    => "link_class"
     )
 
-    # Launch the function call!
-    connection_rule(tl, offset_rules, src_rule, dst_rule, metadata = metadata)
+    connection_rule(tl, rule, metadata = metadata)
     return nothing
 end
 
@@ -300,31 +294,45 @@ function connect_memories(tl)
 
     proc_rule = x -> search_metadata!(x, typekey(), MTypes.memoryproc, in)
     mem2_rule  = x -> search_metadata!(x, typekey(), MTypes.memory(2), in)
+    mem1_rule = x -> search_metadata!(x, typekey(), MTypes.memory(1), in)
 
 
-    offset_rules = [
-        (CartesianIndex(-1,0), "out[0]", "memory_in"),
-        (CartesianIndex(-1,1), "out[1]", "memory_in"),
-    ]
-    connection_rule(tl, offset_rules, mem2_rule, proc_rule, metadata = request_metadata)
+    mem2_to_proc = ConnectionRule([
+            Offset((-1,0), "out[0]", "memory_in"),
+            Offset((-1,1), "out[1]", "memory_in"),
+        ],
+        source_filter = mem2_rule,
+        dest_filter = proc_rule,
+    )
+    connection_rule(tl, mem2_to_proc, metadata = return_metadata)
 
-    offset_rules = [
-        (CartesianIndex(1,0), "memory_out", "in[0]"),
-        (CartesianIndex(1,-1), "memory_out", "in[1]")
-    ]
-
-    connection_rule(tl, offset_rules, proc_rule, mem2_rule, metadata = return_metadata)
+    proc_to_mem2 = ConnectionRule([
+            Offset((1,0), "memory_out", "in[0]"),
+            Offset((1,-1), "memory_out", "in[1]")
+        ],
+        source_filter = proc_rule,
+        dest_filter = mem2_rule,
+    )
+    connection_rule(tl, proc_to_mem2, metadata = request_metadata)
 
     ########################### 
     # Connect 1 port memories #
     ########################### 
-    mem1_rule = x -> search_metadata!(x, typekey(), MTypes.memory(1), in)
 
-    offset_rule = [(CartesianIndex(-1,0), "out[0]", "memory_in")]
-    connection_rule(tl, offset_rule, mem1_rule, proc_rule, metadata = request_metadata)
+    mem1_to_proc = ConnectionRule(
+        [Offset((-1,0), "out[0]", "memory_in")],
+        source_filter = mem1_rule,
+        dest_filter = proc_rule,
+    )
+    connection_rule(tl, mem1_to_proc, metadata = return_metadata)
 
-    offset_rule = [(CartesianIndex(1,0), "memory_out", "in[0]")]
-    connection_rule(tl, offset_rule, proc_rule, mem1_rule, metadata = return_metadata)
+    proc_to_mem1 = ConnectionRule(
+        [Offset((1,0), "memory_out", "in[0]")],
+        source_filter = proc_rule,
+        dest_filter = mem1_rule,
+
+    )
+    connection_rule(tl, proc_to_mem1, metadata = return_metadata)
 
     return nothing
 end
