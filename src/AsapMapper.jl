@@ -70,8 +70,8 @@ abstract type MapConstructor end
 # Invariants on the type:
 #
 # - Frequency and Multi are concrete Bool and cannot both be `true`.
-struct KC{Frequency, Multi} <: AbstractArchitecture 
-    # Inner constructor to enforce invariants on the type parameters. 
+struct KC{Frequency, Multi} <: Architecture
+    # Inner constructor to enforce invariants on the type parameters.
     # Specifically, need to make sure "Frequency" and "Multi" are both
     # booleans and not both "Bool" at the same time.
     function KC{F,M}() where {F,M}
@@ -109,7 +109,7 @@ include("PNR.jl")
 
 #include("IP_Router/Router.jl")
 
-include("Plots/MappingPlots.jl")
+#include("Plots/MappingPlots.jl")
 
 ################################################################################
 # Useful for testing and debugging
@@ -133,7 +133,7 @@ end
 ################################################################################
 
 function swoop(profilepath::String)
-    savedir = joinpath(PKGDIR, "apps") 
+    savedir = joinpath(PKGDIR, "apps")
     # Create a name for this in the save directory.
     savename = augment(savedir, "mapper_in.json")
     savepath = joinpath(savedir, savename)
