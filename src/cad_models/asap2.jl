@@ -3,19 +3,33 @@ function asap2(num_links, A)
 
     processor = build_processor_tile(num_links) 
     for r in 0:11, c in 0:12
-        add_child(arch, processor, CartesianIndex(r,c))
+        add_child(arch, processor, Address(r,c))
     end
-    for r in 12, c in 2:9
-        add_child(arch, processor, CartesianIndex(r,c))
+    # Add the two processors on the bottom that are not memory processors.
+    # Do not include "viterbi", "fft", or "motion estimation" for now.
+    add_child(arch, processor, Address(12, 4))
+    add_child(arch, processor, Address(12, 9))
+
+    # Add the memory processors.
+    memory_processor = build_processor_tile(num_links, include_memory = true)
+    for r in 12, c in (2, 3, 5, 6, 7, 8)
+        add_child(arch, memory_processor, Address(r, c))
+    end
+
+    # Add the memories. Use left corner as address.
+    memory = build_memory(2)
+    for r in 13, c in (2, 5, 7)
+        add_child(arch, memory, Address(r, c))
     end
 
     input_handler = build_input_handler(12) 
-    add_child(arch, input_handler, CartesianIndex(0,-1))
+    add_child(arch, input_handler, Address(0,-1))
 
     output_handler = build_output_handler(12)
-    add_child(arch, output_handler, CartesianIndex(0,13))
+    add_child(arch, output_handler, Address(0,13))
 
     connect_processors(arch, num_links)
+    connect_memories(arch)
     connect_io_asap2(arch)
 
     return arch
@@ -32,8 +46,8 @@ function connect_io_asap2(arch)
 
     # Connect input manually
     for i in 0:11
-        src_address = CartesianIndex(0,-1)
-        dst_address = CartesianIndex(i,0)
+        src_address = Address(0,-1)
+        dst_address = Address(i,0)
         src_name = getname(arch, src_address)
         dst_name = getname(arch, dst_address)
 
@@ -44,8 +58,8 @@ function connect_io_asap2(arch)
 
     # Connect output manually
     for i in 0:11
-        src_address = CartesianIndex(i,12)
-        dst_address = CartesianIndex(0,13)
+        src_address = Address(i,12)
+        dst_address = Address(0,13)
         src_name = getname(arch, src_address)
         dst_name = getname(arch, dst_address)
 

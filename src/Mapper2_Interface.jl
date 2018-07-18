@@ -98,9 +98,9 @@ Base.@propagate_inbounds function Mapper2.SA.channel_cost(
         channel::CostChannel
     )
 
-    src = getaddress(sa.nodes[channel.source])
-    dst = getaddress(sa.nodes[channel.sink])
-    distance = sa.distance[src, dst]
+    src = sa.nodes[channel.source]
+    dst = sa.nodes[channel.sink]
+    distance = getdistance(sa.distance, src, dst)
 
     return channel.cost * distance
 end
@@ -138,7 +138,7 @@ end
 #
 # The maxheap allows for contant-time checking of the highest ratio between
 # nodes and cores.
-mutable struct RankedNode{T} <: Mapper2.SA.Node
+mutable struct RankedNode{T} <: Mapper2.SA.SANode
     location    ::T
     class :: Int64
     outchannels   ::Vector{Int64}
@@ -221,7 +221,7 @@ end
 # nodes as they can only be mapped to high_performance cores.
 @enum NodeClass low_power neutral
 
-mutable struct HeterogenousNode{T} <: Mapper2.SA.Node
+mutable struct HeterogenousNode{T} <: Mapper2.SA.SANode
     location    :: T
     out_edges   :: Vector{Int64}
     in_edges    :: Vector{Int64}
@@ -241,7 +241,7 @@ end
 
 # Extend the "address_cost" method to penalize low_power tasks mapped to non
 # low_power components.
-function Mapper2.SA.address_cost(::Type{KC{false,true}}, sa::SAStruct, node::SA.Node)
+function Mapper2.SA.address_cost(::Type{KC{false,true}}, sa::SAStruct, node::SA.SANode)
     if node.class == neutral
         return zero(Float64)
 

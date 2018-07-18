@@ -1,5 +1,7 @@
 using Plots
 gr()
+
+using Mapper2.MapperGraphs
 #pyplot()
 
 ################################################################################
@@ -123,7 +125,8 @@ function getboxes(m::Map{A,2}, spacing, tilesize) where A
             task_bin = missing
         end
 
-        core_bin = round(Mapper2.get_metadata!(child, "rank").normalized_rank, 2)
+        #core_bin = round(Mapper2.get_metadata!(child, "rank").normalized_rank, 2)
+        core_bin = 2
         push!(boxes, DrawBox(x, y, width, height, fill, core_bin, task_bin))
     end
     return boxes

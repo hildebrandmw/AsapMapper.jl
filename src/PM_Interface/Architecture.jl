@@ -29,6 +29,8 @@ function build_architecture(c::PMConstructor, json_dict)
         toplevel =  asap3(num_links, kc_type)
     elseif arch == "Array_Asap4"
         toplevel =  asap4(num_links, kc_type)
+    elseif arch == "Array_Asap2"
+        toplevel = asap2(num_links, kc_type)
     else
         error("Unrecognized Architecture: $arch_string")
     end
@@ -57,6 +59,8 @@ function Base.ismatch(c::Component, pm_base_type)
 end
 
 function name_mappables(a::TopLevel, json_dict)
+    warnings_given = 0
+    warning_limit = 10
     for core in json_dict["array_cores"]
         # Get the address for the core
         addr = CartesianIndex(core["address"]...)
@@ -64,7 +68,15 @@ function name_mappables(a::TopLevel, json_dict)
 
         # Spit out a warning is the address is not in the model.
         if !haskey(a.address_to_child, addr)
-            @warn "No address $addr found for core $(core["name"])."
+            # Suppress if to many warnings have been generated.
+            if warnings_given < warning_limit
+                @warn "No address $addr found for core $(core["name"])."
+                warnings_given += 1
+            elseif warnings_given == warning_limit
+                @warn "Suppressing further address warnings."
+                warnings_given = warning_limit + 1
+            end
+
             continue
         end
 

@@ -40,7 +40,7 @@ function parse_input(t::Taskgraph, tasklist, options)
     for task in tasklist
         name = task["name"]
         metadata = getkeys(task, _pm_task_fields)
-        add_node(t, TaskgraphNode(name, metadata))
+        add_node(t, TaskgraphNode(name, metadata = metadata))
     end
 
     # Iterate through again, collect and add all edges. Each edge can be
@@ -87,7 +87,7 @@ function parse_input(t::Taskgraph, tasklist, options)
                       "measurements_dict"   => link_def["measurements_dict"],
                      )
 
-                new_edge = TaskgraphEdge(source_task, dest_task, metadata)
+                new_edge = TaskgraphEdge(source_task, dest_task, metadata = metadata)
                 add_edge(t, new_edge)
             end
         end

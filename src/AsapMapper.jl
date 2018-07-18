@@ -109,7 +109,7 @@ include("PNR.jl")
 
 #include("IP_Router/Router.jl")
 
-#include("Plots/MappingPlots.jl")
+include("Plots/MappingPlots.jl")
 
 ################################################################################
 # Useful for testing and debugging

@@ -290,7 +290,7 @@ function asap_pnr(m::Map{A,D}) where {A,D}
 
         aux = AuxStorage(m.options[:task_rank_penalty_start], maxheap)
         while true
-            m = place(m, enable_address = true, aux = aux)
+            m = place!(m, enable_address = true, aux = aux)
             success = true
             # Sometimes, routing will fail if memory processors are not located
             # next to their respective memories. This try-catch block makes sure
@@ -310,7 +310,7 @@ function asap_pnr(m::Map{A,D}) where {A,D}
     else
         for i in 1:m.options[:num_retries]
             try
-                place(m)
+                place!(m)
                 route(m)
                 check_routing(m; quiet = true) && break
             catch err
