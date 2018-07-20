@@ -38,8 +38,8 @@ abstract type MapDump end
 struct MapDumpNode <: MapDump
     name            ::String
     address         ::Tuple
-    core_name       ::Union{String,Void}
-    core_type       ::Union{String,Void}
+    core_name       ::Union{String,Nothing}
+    core_type       ::Union{String,Nothing}
     leaf_node_dict  ::Dict{String,Any}
 end
 
@@ -55,7 +55,7 @@ function MapDumpNode(name, address::T, core_name, core_type) where T
 end
 
 struct MapDumpRoute <: MapDump
-    network_id      ::Union{Int,Void}
+    network_id      ::Union{Int,Nothing}
     new_source_index::_index_types
     new_dest_index  ::_index_types
     source_task     ::_name_types

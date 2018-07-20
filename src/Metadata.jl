@@ -32,7 +32,7 @@ ismemory(s::String) = startswith(s, "memory") && endswith(s, "port")
 ismemory(x) = false
 
 # Global NT for dealing with attributes.
-const MTypes = @NT(
+const MTypes = (
     proc        = "processor",
     memoryproc  = "memory_processor",
     input       = "input_handler",

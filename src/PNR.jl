@@ -128,6 +128,7 @@ function multisample_routing(arch, taskgraph, iteration_number, nsamples)
         Mapper2.MapperCore.load(m, load_path)
         try
             m = route(m)
+        catch
         end
         push!(results, m.mapping)
     end

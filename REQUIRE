@@ -1,6 +1,7 @@
-julia 0.6
+julia 0.7-
+Mapper2
 IterTools
 JSON
-MicroLogging
-NamedTuples
-Missings
+DataStructures
+Plots
+GR

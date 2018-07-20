@@ -1,22 +1,17 @@
 module AsapMapper
 
-const is07 = VERSION > v"0.7.0-"
-
 using Mapper2
 using IterTools
 using JSON
-using Missings
-is07 ? (using Logging) : (using MicroLogging)
-using NamedTuples
-using Compat
+using Logging
 using DataStructures
 
 # Set up directory paths
 const SRCDIR = @__DIR__
 const PKGDIR = dirname(SRCDIR)
-const DBDIR = joinpath(PKGDIR, "db")
 
-set_logging(level) = configure_logging(AsapMapper, min_level=level)
+#set_logging(level) = configure_logging(AsapMapper, min_level=level)
+set_logging(level) = nothing
 
 export  place_and_route,
         testmap,

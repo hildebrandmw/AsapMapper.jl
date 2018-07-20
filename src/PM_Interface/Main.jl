@@ -82,9 +82,6 @@ taskgraph.
 * `"preserve_dest"` - Preserve the destination index. This keeps the mapper from
     swapping out destination fifos.
 """
-
-# Central list of options that are expected from the project manager input
-# file or are to be over-ridden by local options.
 function _get_default_options()
     return Dict(
         # General Options
