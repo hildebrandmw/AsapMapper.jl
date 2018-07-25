@@ -26,15 +26,7 @@ export  place_and_route,
         asap4,
         asap3,
         # Architecture types
-        KCStandard,
-        KCNoWeight,
-        # Experiments
-        Experiment,
-        SharedPlacement,
-        MultiArchitecture,
-        # Results
-        Result,
-        SharedPlacementResult,
+        KC,
         # Misc
         FunctionCall,
         call,

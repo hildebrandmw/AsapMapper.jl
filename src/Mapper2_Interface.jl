@@ -270,9 +270,9 @@ end
 ################################################################################
 
 # Custom Channels
-struct CostRoutingChannel <: AbstractRoutingChannel
-    start_vertices   ::Vector{Vector{Int64}}
-    stop_vertices    ::Vector{Vector{Int64}}
+struct CostRoutingChannel <: RoutingChannel
+    start_vertices   ::Vector{PortVertices}
+    stop_vertices    ::Vector{PortVertices}
     cost             ::Float64
 end
 
