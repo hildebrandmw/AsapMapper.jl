@@ -230,18 +230,18 @@ function build_map(c::PMConstructor)
 
     # Print out the important operations for information/debugging purposes.
     task_rank_key = options[:use_task_suitability] ? options[:task_rank_key] : ""
-    @info """
-    Mapper Options Summary
-    ----------------------
+    # @info """
+    # Mapper Options Summary
+    # ----------------------
 
-    Using Link Weights: $(options[:use_profiled_links])
+    # Using Link Weights: $(options[:use_profiled_links])
 
-    Using Task Suitability: $(options[:use_task_suitability])
+    # Using Task Suitability: $(options[:use_task_suitability])
 
-    Task Rank Key: $task_rank_key
+    # Task Rank Key: $task_rank_key
 
-    Existing Map: $(options[:existing_map])
-    """
+    # Existing Map: $(options[:existing_map])
+    # """
 
     return m
 end
@@ -287,13 +287,13 @@ function asap_pnr(m::Map{A,D}) where {A,D}
 
         aux = AuxStorage(m.options[:task_rank_penalty_start], maxheap)
         while true
-            m = place!(m, enable_address = true, aux = aux)
+            place!(m, enable_address = true, aux = aux)
             success = true
             # Sometimes, routing will fail if memory processors are not located
             # next to their respective memories. This try-catch block makes sure
             # the whole routine doesn't break if this happens.
             try
-                m = route(m)
+                route!(m)
             catch
                 success = false
             end
@@ -308,7 +308,7 @@ function asap_pnr(m::Map{A,D}) where {A,D}
         for i in 1:m.options[:num_retries]
             try
                 place!(m)
-                route(m)
+                route!(m)
                 check_routing(m; quiet = true) && break
             catch err
                 @error "Received routing error: $err. Trying again."

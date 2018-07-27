@@ -312,7 +312,7 @@ function make_port_metadata(direction, class, num_links)
     x_spacing = 0.4/num_links
     y_spacing = 0.4/num_links
     if direction in ("east", "west")
-        if class == "input" 
+        if class == Input
             if direction == "east"
                 x_offset = 1.0
                 y_offset = 0.05
@@ -332,7 +332,7 @@ function make_port_metadata(direction, class, num_links)
         return [Dict("x" => x_offset, "y" => y_offset + i * y_spacing) 
                     for i in 0:num_links-1]
     elseif direction in ("north", "south")
-        if class == "input" 
+        if class == Input
             if direction == "north"
                 x_offset = 0.05
                 y_offset = 0.0

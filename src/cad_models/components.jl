@@ -22,7 +22,7 @@ function build_processor_tile(
 
     # Add the circuit switched ports
     for dir in directions
-        for (suffix,class)  in zip(("_in", "_out"), ("input", "output"))
+        for (suffix,class)  in zip(("_in", "_out"), (Input, Output))
             meta = top_level_port_metadata(dir, class, "circuit_link", num_links)
             port_name = join((dir, suffix))
             add_port(comp, port_name, class, num_links, metadata = meta)
@@ -51,8 +51,8 @@ function build_processor_tile(
     if include_memory
         return_link  = routing_metadata("memory_response_link")
         request_link = routing_metadata("memory_request_link")
-        add_port(comp, "memory_in", "input", metadata = return_link)
-        add_port(comp, "memory_out", "output", metadata = request_link)
+        add_port(comp, "memory_in", Input, metadata = return_link)
+        add_port(comp, "memory_out", Output, metadata = request_link)
         add_link(comp, "processor.memory_out", "memory_out", metadata = request_link)
         add_link(comp, "memory_in", "processor.memory_in", metadata = return_link)
     end
@@ -147,18 +147,18 @@ function build_processor(num_links;
 
     component = Component(name, metadata = comp_metadata)
     # fifos
-    add_port(component, "fifo", "input", num_fifos, metadata = proc_fifo_metadata(num_fifos))
+    add_port(component, "fifo", Input, num_fifos, metadata = proc_fifo_metadata(num_fifos))
     # ports. Neet to play some indexing games for the metadata vector to get
     # indices to line up with the Asap4 manual.
     port_metadata = proc_output_metadata(length(directions), num_links)
     # NOTE: Iterators.product iterates over the first element the quickest.
     for (port_index,(str,i)) in enumerate(Iterators.product(directions, 1:num_links))
-        add_port(component, "$str[$(i-1)]", "output", metadata = port_metadata[port_index])
+        add_port(component, "$str[$(i-1)]", Output, metadata = port_metadata[port_index])
     end
     # Add memory ports. Will only be connected in the memory processor tile.
     if include_memory
-        add_port(component, "memory_in", "input", metadata = proc_memory_return_metadata())
-        add_port(component, "memory_out", "output", metadata = proc_memory_request_metadata())
+        add_port(component, "memory_in", Input, metadata = proc_memory_return_metadata())
+        add_port(component, "memory_out", Output, metadata = proc_memory_request_metadata())
     end
     # Return the created type
     return component
@@ -168,8 +168,8 @@ function build_memory(nports = 2)
     component = Component("memory_$(nports)port", metadata = mem_nport_metadata(nports))
 
     # Instantiate ports
-    add_port(component, "in", "input", nports, metadata = mem_memory_request_metadata(nports))
-    add_port(component, "out", "output", nports, metadata = mem_memory_return_metadata(nports))
+    add_port(component, "in", Input, nports, metadata = mem_memory_request_metadata(nports))
+    add_port(component, "out", Output, nports, metadata = mem_memory_return_metadata(nports))
 
     return component
 end
@@ -180,7 +180,7 @@ end
 ##############################
 function build_input_handler(num_links)
     component = Component("input_handler", metadata = input_handler_metadata())
-    add_port(component, "out", "output", num_links, metadata = input_handler_port_metadata(num_links))
+    add_port(component, "out", Output, num_links, metadata = input_handler_port_metadata(num_links))
 
     return component
 end
@@ -190,7 +190,7 @@ end
 ##############################
 function build_output_handler(num_links)
     component = Component("output_handler", metadata = output_handler_metadata())
-    add_port(component, "in", "input", num_links, metadata = output_handler_port_metadata(num_links))
+    add_port(component, "in", Input, num_links, metadata = output_handler_port_metadata(num_links))
 
     return component
 end
