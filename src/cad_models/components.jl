@@ -7,11 +7,11 @@
 Build a processor tile.
 """
 function build_processor_tile(
-              num_links; 
-              include_memory = false,
-              name = include_memory ? "memory_processor_tile" : "processor_tile", 
-              directions = ("east", "north", "west", "south"),
-             )
+        num_links; 
+        include_memory = false,
+        name = include_memory ? "memory_processor_tile" : "processor_tile", 
+        directions = ("east", "north", "west", "south"),
+    )
 
     num_fifos = 2
     # No need to assign metadata to this component.
@@ -129,11 +129,13 @@ end
 ################################################################################
 #                           processor
 ################################################################################
-function build_processor(num_links;
-                         include_memory = false, 
-                         num_fifos = 2,
-                         directions = ("east", "north", "west", "south")
-                        )
+function build_processor(
+        num_links;
+        include_memory = false, 
+        num_fifos = 2,
+        directions = ("east", "north", "west", "south")
+    )
+
     # Build the metadata dictionary for the processor component
     metadata = Dict{String,Any}()
 
@@ -196,18 +198,10 @@ function build_output_handler(num_links)
 end
 
 ################################################################################
-# Deprecations
-################################################################################
-@deprecate build_memory_1port() build_memory(1)
-@deprecate build_memory_2port() build_memory(2)
-@deprecate build_memory_processor_tile(num_links) build_processor_tile(num_links, include_memory = true)
-
-################################################################################
 # Functions for connecting processors, IO, and memories together
 ################################################################################
 squash(x) = reshape(x, :)
-function connect_processors(tl, num_links)
-    fn = x -> search_metadata!(x, typekey(), MTypes.proc, in)
+function connect_processors(toplevel, num_links)
 
     # Build metadata dictionary for capacity and cost
     metadata = Dict(
@@ -228,14 +222,14 @@ function connect_processors(tl, num_links)
         for (a,b,c) in offset_skeleton, i in 0:num_links
     ])
 
+    f = x -> search_metadata!(x, typekey(), MTypes.proc, in)
     rule = ConnectionRule(
         offsets,
-        source_filter = fn,
-        dest_filter = fn,
+        source_filter = f,
+        dest_filter = f,
     )
 
-    connection_rule(tl, offsets, metadata = metadata)
-
+    connection_rule(toplevel, offsets, metadata = metadata)
 end
 
 function connect_io(tl, num_links)

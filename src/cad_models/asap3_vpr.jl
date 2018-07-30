@@ -4,7 +4,6 @@
 function asap3_vpr(num_links,A)
     arch = TopLevel{A,2}("asap3_vpr")
 
-
     ####################
     # Normal Processor #
     ####################
@@ -14,14 +13,10 @@ function asap3_vpr(num_links,A)
     for r in 0:29, c in 0:31
         add_child(arch, processor, CartesianIndex(r,c))
     end
-    # for r in 30:31, c in 12:19
-    #     add_child(arch, processor, CartesianIndex(r,c))
-    # end
 
 	####################
 	# Memory Processor #
 	####################
-
 	memory_processor = build_processor_tile(num_links, include_memory = true)
 	for r = 30, c = 0:31
         add_child(arch, memory_processor, CartesianIndex(r,c))

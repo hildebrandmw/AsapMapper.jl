@@ -16,7 +16,7 @@ const _mapper_task_classes = Set([
     ])
 
 # Special attributes are task attributes that are considere "sparse" in the
-# architecture and should be moved direct look-up tables rather than 
+# architecture and should be moved direct look-up tables rather than
 # near-address search
 const _special_attributes = Set([
       "memory_processor",
@@ -31,7 +31,7 @@ memory_meta(ports::Int) = "memory_$(ports)port"
 ismemory(s::String) = startswith(s, "memory") && endswith(s, "port")
 ismemory(x) = false
 
-# Global NT for dealing with attributes.
+# Global NamedTuple for dealing with attributes.
 const MTypes = (
     proc        = "processor",
     memoryproc  = "memory_processor",
@@ -150,7 +150,7 @@ function routing_metadata(link_class)
 
     return Dict{String,Any}(
         "link_class" => link_class,
-    ) 
+    )
 end
 
 # Processor component metadata.
@@ -232,7 +232,6 @@ end
 
 ################################################################################
 # Metadata for top level ports - used for pretty post-route plotting.
-
 function top_level_port_metadata(orientation, direction, class, num_links)
     # Get a base dictionary for this port class.
     base = routing_metadata(class)
@@ -241,7 +240,7 @@ function top_level_port_metadata(orientation, direction, class, num_links)
     y_spacing = 0.4/num_links
 
     if orientation in ("east", "west")
-        if direction == "input" 
+        if direction == Input
             if orientation == "east"
                 x_offset = 1.0
                 y_offset = 0.05
@@ -264,12 +263,12 @@ function top_level_port_metadata(orientation, direction, class, num_links)
             d = Dict(
                 "x" => x_offset,
                 "y" => y_offset + i*y_spacing
-               ) 
+               )
             # merge with the base metadata dictionary
             return merge(d, base)
         end
     elseif orientation in ("north", "south")
-        if direction == "input" 
+        if direction == Input
             if orientation == "north"
                 x_offset = 0.05
                 y_offset = 0.0
@@ -292,7 +291,7 @@ function top_level_port_metadata(orientation, direction, class, num_links)
             d = Dict(
                 "x" => x_offset + i*x_spacing,
                 "y" => y_offset,
-               ) 
+               )
             # merge with the base metadata dictionary
             return merge(d, base)
         end
@@ -301,60 +300,3 @@ function top_level_port_metadata(orientation, direction, class, num_links)
     end
     return offset_dicts
 end
-
-
-################################################################################
-# Miscellaneous data
-################################################################################
-
-# Functions for making port-offsets. Allows nicer plotting of routes.
-function make_port_metadata(direction, class, num_links)
-    x_spacing = 0.4/num_links
-    y_spacing = 0.4/num_links
-    if direction in ("east", "west")
-        if class == Input
-            if direction == "east"
-                x_offset = 1.0
-                y_offset = 0.05
-            else
-                x_offset = 0.0
-                y_offset = 0.55
-            end
-        else
-            if direction == "east"
-                x_offset = 1.0
-                y_offset = 0.55
-            else
-                x_offset = 0.0
-                y_offset = 0.05
-            end
-        end
-        return [Dict("x" => x_offset, "y" => y_offset + i * y_spacing) 
-                    for i in 0:num_links-1]
-    elseif direction in ("north", "south")
-        if class == Input
-            if direction == "north"
-                x_offset = 0.05
-                y_offset = 0.0
-            else
-                x_offset = 0.55
-                y_offset = 1.0
-            end
-        else
-            if direction == "north"
-                x_offset = 0.55
-                y_offset = 0.0
-            else
-                x_offset = 0.05
-                y_offset = 1.0
-            end
-        end
-        return [Dict("x" => x_offset + i * x_spacing, "y" => y_offset) 
-                    for i in 0:num_links-1]
-    else
-        return [make_port_metadata() for _ in 1:num_links]
-    end
-end
-
-make_port_metadata() = Dict("x" => 0.5, "y" => 0.5)
-make_port_metadata(num_links) = [make_port_metadata() for _ in 1:num_links]
