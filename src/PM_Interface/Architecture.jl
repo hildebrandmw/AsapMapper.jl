@@ -17,20 +17,13 @@ function build_architecture(c::PMConstructor, json_dict)
     use_task_suitability     = options[:use_task_suitability]
     use_heterogenous_mapping = options[:use_heterogenous_mapping]
 
-    # Hack at the moment - make sure both specialized mapping options are not
-    # active at the same time.
-    @assert !(use_task_suitability && use_heterogenous_mapping)
-    kc_type = KC{use_task_suitability, use_heterogenous_mapping}
-
-    @debug "Use KC Type: $kc_type"
-
     # Perform manual dispatch based on the string.
     if arch == "Array_Asap3"
-        toplevel =  asap3(num_links, kc_type)
+        toplevel =  asap3(Rectangular(num_links, 1))
     elseif arch == "Array_Asap4"
-        toplevel =  asap4(num_links, kc_type)
+        toplevel =  asap4(Rectangular(num_links, 1))
     elseif arch == "Array_Asap2"
-        toplevel = asap2(num_links, kc_type)
+        toplevel = asap2(Rectangular(num_links, 1))
     else
         error("Unrecognized Architecture: $arch_string")
     end
@@ -58,7 +51,7 @@ function Base.ismatch(c::Component, pm_base_type)
     return false
 end
 
-function name_mappables(a::TopLevel, json_dict)
+function name_mappables(toplevel::TopLevel, json_dict)
     warnings_given = 0
     warning_limit = 10
     for core in json_dict["array_cores"]
@@ -67,7 +60,7 @@ function name_mappables(a::TopLevel, json_dict)
         base_type = core["base_type"]
 
         # Spit out a warning is the address is not in the model.
-        if !haskey(a.address_to_child, addr)
+        if !isaddress(toplevel, addr)
             # Suppress if to many warnings have been generated.
             if warnings_given < warning_limit
                 @warn "No address $addr found for core $(core["name"])."
@@ -80,7 +73,7 @@ function name_mappables(a::TopLevel, json_dict)
             continue
         end
 
-        parent = getchild(a, addr)
+        parent = toplevel[addr]
         for path in walk_children(parent)
             component = parent[path]
             # Try to match the base_type of the Project_Manager core with
@@ -102,7 +95,7 @@ function name_mappables(a::TopLevel, json_dict)
     end
 end
 
-function experimental_transforms(a::TopLevel, json_dict)
+function experimental_transforms(toplevel::TopLevel, json_dict)
     options = json_dict[_options_path_]
 
     use_task_suitability = options[:use_task_suitability]
@@ -111,17 +104,17 @@ function experimental_transforms(a::TopLevel, json_dict)
     # Normalize the rank assigned to each core based on its provided
     # maximum operating frequency.
     if use_task_suitability
-        normalize_ranks(a, options)
+        normalize_ranks(toplevel, options)
 
     # Read through the special_assignments dictionary to assign cores as either
     # high-performance or low-power
     elseif use_heterogenous_mapping
-        specialize_cores(a, options)
+        specialize_cores(toplevel, options)
     end
 end
 
-function normalize_ranks(a::TopLevel, options)
-    all_components = [a[path] for path in walk_children(a)]
+function normalize_ranks(toplevel::TopLevel, options)
+    all_components = [toplevel[path] for path in walk_children(toplevel)]
 
     nonranking_types = (MTypes.input, MTypes.output)
     ranking_types = (MTypes.proc, MTypes.memory(1), MTypes.memory(2))

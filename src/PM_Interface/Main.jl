@@ -1,6 +1,7 @@
 # Location in the input dictionary where the architecture specification 
 # can be found.
 const _options_path_ = KeyChain(("mapper_options",))
+
 # Don't rank input or output nodes.
 isnonranking(t) = isinput(t) || isoutput(t)
 
@@ -218,8 +219,13 @@ function build_map(c::PMConstructor)
     t = build_taskgraph(c, json_dict)
 
     # build the map and attach the options dictionary to it.
-    m = NewMap(a,t)
     options = json_dict[_options_path_]
+
+    use_task_suitability = options[:use_task_suitability]
+    use_heterogenous_mapping = options[:use_heterogenous_mapping]
+
+    kc_rule = KC{use_task_suitability, use_heterogenous_mapping}()
+    m = Map(kc_rule,a,t)
     m.options = options
 
     # Load an existing map if provided with one.
@@ -230,18 +236,6 @@ function build_map(c::PMConstructor)
 
     # Print out the important operations for information/debugging purposes.
     task_rank_key = options[:use_task_suitability] ? options[:task_rank_key] : ""
-    # @info """
-    # Mapper Options Summary
-    # ----------------------
-
-    # Using Link Weights: $(options[:use_profiled_links])
-
-    # Using Task Suitability: $(options[:use_task_suitability])
-
-    # Task Rank Key: $task_rank_key
-
-    # Existing Map: $(options[:existing_map])
-    # """
 
     return m
 end

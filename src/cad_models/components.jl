@@ -1,9 +1,33 @@
 # Styles - mainly for switching between hexagonal and rectangular layouts.
 abstract type Style end
 
-struct Rectangular <: Style end
+# Style API
+links(x::Style) = x.links
+iolinks(x::Style) = x.io_links
+
+# For unifying filters for creating source/sink rules.
+filter_proc(x) = search_metadata!(x, typekey(), MTypes.proc, in)
+filter_io(x) = search_metadata!(
+    x, 
+    typekey(), 
+    [MTypes.proc, MTypes.input, MTypes.output], 
+    oneofin
+)
+
+filter_memproc(x) = search_metadata!(x, typekey(), MTypes.memoryproc, in)
+filter_memory(n) = x -> search_metadata!(x, typekey(), MTypes.memory(n), in)
+
+################################################################################
+# Rectangular
+################################################################################
+struct Rectangular <: Style 
+    # Number of interprocessor links
+    links :: Int
+    io_links :: Int
+end
+
 directions(::Rectangular) = ("east", "north", "south", "west")
-function rules(::Rectangular, num_links) 
+function procrules(style::Rectangular) 
 
     offset_skeleton = (
         ( (-1, 0), "north", "south"),
@@ -14,22 +38,95 @@ function rules(::Rectangular, num_links)
 
     offsets = squash([
         Offset(a, "$(b)_out[$i]", "$(c)_in[$i]") 
-        for (a,b,c) in offset_skeleton, i in 0:num_links
+        for (a,b,c) in offset_skeleton, i in 0:style.links
     ])
-    f = x -> search_metadata!(x, typekey(), MTypes.proc, in)
 
     return ConnectionRule(
         offsets,
-        source_filter = f,
-        dest_filter = f
+        source_filter = filter_proc,
+        dest_filter = filter_proc,
     )
 end
 
 
-struct Hexagonal <: Style end
+function iorules(style::Rectangular)
+
+    offset_skeletons = (
+        ( ( 0, 1), "east", "west"),
+        ( ( 0,-1), "west", "east"),
+    )
+
+    input_rules = squash([
+        Offset(a, "out[$i]", "$(c)_in[$i]")
+        for (a,b,c) in offset_skeletons, i in 0:style.io_links-1
+    ])
+
+    output_rules = squash([
+        Offset(a, "$(b)_out[$i]", "in[$i]")
+        for (a,b,c) in offset_skeletons, i in 0:style.io_links-1
+    ])
+
+    return ConnectionRule(
+        vcat(input_rules, output_rules),
+        source_filter = filter_io,
+        dest_filter = filter_io,
+    )
+end
+
+function memory_request_rules(::Rectangular)
+
+    # 2 port memories
+    proc_to_mem2 = ConnectionRule([
+            Offset((1,0), "memory_out", "in[0]"),
+            Offset((1,-1), "memory_out", "in[1]")
+        ],
+        source_filter = filter_memproc,
+        dest_filter = filter_memory(2),
+    )
+
+    # 1 port memories
+    proc_to_mem1 = ConnectionRule(
+        [Offset((1,0), "memory_out", "in[0]")],
+        source_filter = filter_memproc,
+        dest_filter = filter_memory(1),
+
+    )
+    return (proc_to_mem1, proc_to_mem2)
+end
+
+function memory_return_rules(::Rectangular)
+
+    # 2 port memories
+    mem2_to_proc = ConnectionRule([
+            Offset((-1,0), "out[0]", "memory_in"),
+            Offset((-1,1), "out[1]", "memory_in"),
+        ],
+        source_filter = filter_memory(2),
+        dest_filter = filter_memproc,
+    )
+
+    # 1 port memories
+    mem1_to_proc = ConnectionRule(
+        [Offset((-1,0), "out[0]", "memory_in")],
+        source_filter = filter_memory(1),
+        dest_filter = filter_memproc,
+    )
+
+    return (mem2_to_proc, mem1_to_proc)
+end
+
+
+################################################################################
+# Hexagonal
+################################################################################
+
+struct Hexagonal <: Style 
+    links::Int
+    io_links::Int
+end
 # Encode hexagonal directions using angles.
 directions(::Hexagonal) = ("30", "90", "150", "210", "270", "330")
-function rules(::Hexagonal2D)
+function procrules(style::Hexagonal)
 
     # Rule to apply if the column address is even.
     even_skeleton = (
@@ -41,10 +138,15 @@ function rules(::Hexagonal2D)
         ((1, 1),  "330_out", "150_in"),
     )
     even_offsets = squash([
-        Offset(a, "$(b)_out[$i]", "$(c)_in[$i]") 
-        for (a,b,c) in even_skeleton, i in 0:num_links
+        Offset(a, "$b[$i]", "$c[$i]") 
+        for (a,b,c) in even_skeleton, i in 0:style.links-1
     ])
-    even_rule = ConnectionRule(even_offsets, address_filter = x -> iseven(Tuple(x)[2]))
+    even_rule = ConnectionRule(
+        even_offsets, 
+        source_filter = filter_proc,
+        dest_filter = filter_proc,
+        address_filter = x -> iseven(x[2])
+    )
 
     # Rule to apply if the column address is odd.
     odd_skeleton = (
@@ -56,12 +158,93 @@ function rules(::Hexagonal2D)
         (( 0, 1),  "330_out", "150_in"),
     )
     odd_offsets = squash([
-        Offset(a, "$(b)_out[$i]", "$(c)_in[$i]") 
-        for (a,b,c) in odd_skeleton, i in 0:num_links
+        Offset(a, "$b[$i]", "$c[$i]") 
+        for (a,b,c) in odd_skeleton, i in 0:style.links-1
     ])
-    odd_rule = ConnectionRule(odd_offsets, address_filter = x -> isodd(Tuple(x)[2]))
+    odd_rule = ConnectionRule(
+        odd_offsets, 
+        source_filter = filter_proc,
+        dest_filter = filter_proc,
+        address_filter = x -> isodd(x[2])
+    )
 
     return (even_rule, odd_rule)
+end
+
+function iorules(style::Hexagonal)
+
+    # Connection rule for even columns
+    even_skeleton = (
+        ( ( 0, 1), "30_out", "210_in"),
+        ( ( 1, 1), "330_out", "150_in"),
+        ( ( 0,-1), "150_out", "210_in"),
+        ( ( 1,-1), "210_out", "30_in"),
+    )
+
+    # Processor -> Output_Handler
+    even_offsets_1 = squash([
+        Offset(a, "$b[$i]", "in[$i]") 
+        for (a,b,c) in even_skeleton, i in 0:style.io_links-1
+    ])
+    # Input Handler -> Processor
+    even_offsets_2 = squash([
+        Offset(a, "out[$i]", "$c[$i]") 
+        for (a,b,c) in even_skeleton, i in 0:style.io_links-1
+    ])
+    even_rule = ConnectionRule(
+        vcat(even_offsets_1, even_offsets_2),
+        source_filter = filter_io,
+        dest_filter = filter_io,
+        address_filter = x -> iseven(x[2])
+    )
+
+    # Connection rule for odd columns
+    odd_skeleton = (
+        ( (-1, 1), "30_out", "210_in"),
+        ( ( 0, 1), "330_out", "150_in"),
+        ( (-1,-1), "150_out", "210_in"),
+        ( ( 0,-1), "210_out", "30_in"),
+    )
+    # Processor -> Output_Handler
+    odd_offsets_1 = squash([
+        Offset(a, "$b[$i]", "in[$i]") 
+        for (a,b,c) in odd_skeleton, i in 0:style.io_links-1
+    ])
+    # Input Handler -> Processor
+    odd_offsets_2 = squash([
+        Offset(a, "out[$i]", "$c[$i]") 
+        for (a,b,c) in odd_skeleton, i in 0:style.io_links-1
+    ])
+    odd_rule = ConnectionRule(
+        vcat(odd_offsets_1, odd_offsets_2),
+        source_filter = filter_io,
+        dest_filter = filter_io,
+        address_filter = x -> isodd(x[2])
+    )
+
+    return (even_rule, odd_rule)
+end
+
+function memory_return_rules(::Hexagonal)
+    return ConnectionRule(
+        [
+            Offset((-1, 0), "out[0]", "memory_in"), 
+            Offset((-1, 1), "out[1]", "memory_in")
+        ],
+        source_filter = filter_memory(2),
+        dest_filter = filter_memproc
+    )
+end
+
+function memory_request_rules(::Hexagonal)
+    return ConnectionRule(
+        [
+            Offset(( 1, 0), "memory_out", "in[0]"), 
+            Offset(( 1,-1), "memory_out", "in[1]")
+        ],
+        source_filter = filter_memproc,
+        dest_filter = filter_memory(2)
+    )
 end
 
 ################################################################################
@@ -74,13 +257,13 @@ end
 Build a processor tile.
 """
 function build_processor_tile(
-        num_links; 
+        style; 
         include_memory = false,
         name = include_memory ? "memory_processor_tile" : "processor_tile", 
-        style = Rectangular(),
     )
 
     num_fifos = 2
+    num_links = links(style)
     # No need to assign metadata to this component.
     component = Component(name)
 
@@ -97,13 +280,13 @@ function build_processor_tile(
     end
 
     # Instantiate the processor primitive - do special assignment for ASAP mapping.
-    proc_component = build_processor(num_links, include_memory = include_memory)
+    proc_component = build_processor(style, include_memory = include_memory)
 
     add_child(component, proc_component, "processor")
 
     # Instantiate the directional routing muxes
-    routing_mux = build_mux(length(directions),1)
-    for dir in directions
+    routing_mux = build_mux(length(directions(style)),1)
+    for dir in directions(style)
         name = "$(dir)_mux"
         add_child(component, routing_mux, name, num_links)
     end
@@ -197,11 +380,11 @@ end
 #                           processor
 ################################################################################
 function build_processor(
-        num_links;
+        style;
         include_memory = false, 
         num_fifos = 2,
-        style = Rectangular(),
     )
+    num_links = links(style)
     # Build the metadata dictionary for the processor component
     metadata = Dict{String,Any}()
 
@@ -246,9 +429,16 @@ end
 ##############################
 #       INPUT HANDLER        #
 ##############################
-function build_input_handler(num_links)
+function build_input_handler(style)
     component = Component("input_handler", metadata = input_handler_metadata())
-    add_port(component, "out", Output, num_links, metadata = input_handler_port_metadata(num_links))
+    num_links = iolinks(style)
+    add_port(
+        component, 
+        "out", 
+        Output, 
+        num_links, 
+        metadata = input_handler_port_metadata(num_links)
+    )
 
     return component
 end
@@ -256,9 +446,16 @@ end
 ##############################
 #       OUTPUT HANDLER       #
 ##############################
-function build_output_handler(num_links)
+function build_output_handler(style)
     component = Component("output_handler", metadata = output_handler_metadata())
-    add_port(component, "in", Input, num_links, metadata = output_handler_port_metadata(num_links))
+    num_links = iolinks(style)
+    add_port(
+        component, 
+        "in", 
+        Input, 
+        num_links, 
+        metadata = output_handler_port_metadata(num_links)
+    )
 
     return component
 end
@@ -267,7 +464,7 @@ end
 # Functions for connecting processors, IO, and memories together
 ################################################################################
 squash(x) = reshape(x, :)
-function connect_processors(toplevel, num_links, style = Rectangular())
+function connect_processors(toplevel, style)
 
     # Build metadata dictionary for capacity and cost
     metadata = Dict(
@@ -276,37 +473,13 @@ function connect_processors(toplevel, num_links, style = Rectangular())
         "link_class"    => "circuit_link"
     )
 
-    for rule in rules(style, num_links)
+    for rule in procrules(style)
         connection_rule(toplevel, rule, metadata = metadata)
     end
     return nothing
 end
 
-function connect_io(tl, num_links)
-
-    vals = [MTypes.proc, MTypes.input, MTypes.output]
-    fn = x -> search_metadata!(x, typekey(), vals, oneofin)
-
-    offset_skeletons = (
-        ( ( 0, 1), "east", "west"),
-        ( ( 0,-1), "west", "east"),
-    )
-
-    input_rules = squash([
-        Offset(a, "out[$i]", "$(c)_in[$i]")
-        for (a,b,c) in offset_skeletons, i in 0:num_links-1
-    ])
-
-    output_rules = squash([
-        Offset(a, "$(b)_out[$i]", "in[$i]")
-        for (a,b,c) in offset_skeletons, i in 0:num_links-1
-    ])
-
-    rule = ConnectionRule(
-        vcat(input_rules, output_rules),
-        source_filter = fn,
-        dest_filter = fn,
-    )
+function connect_io(toplevel, style)
 
     # Build metadata dictionary for capacity and cost
     metadata = Dict(
@@ -315,11 +488,13 @@ function connect_io(tl, num_links)
         "link_class"    => "link_class"
     )
 
-    connection_rule(tl, rule, metadata = metadata)
+    for rule in iorules(style)
+        connection_rule(toplevel, rule, metadata = metadata)
+    end
     return nothing
 end
 
-function connect_memories(tl)
+function connect_memories(toplevel, style)
     # Create metadata dictionary for the memory links.
     request_metadata = Dict(
         "cost"          => 1.0,
@@ -336,47 +511,13 @@ function connect_memories(tl)
     # Connect 2 port memories #
     ########################### 
 
-    proc_rule = x -> search_metadata!(x, typekey(), MTypes.memoryproc, in)
-    mem2_rule  = x -> search_metadata!(x, typekey(), MTypes.memory(2), in)
-    mem1_rule = x -> search_metadata!(x, typekey(), MTypes.memory(1), in)
+    for rule in memory_request_rules(style)
+        connection_rule(toplevel, rule, metadata = request_metadata)
+    end
 
-
-    mem2_to_proc = ConnectionRule([
-            Offset((-1,0), "out[0]", "memory_in"),
-            Offset((-1,1), "out[1]", "memory_in"),
-        ],
-        source_filter = mem2_rule,
-        dest_filter = proc_rule,
-    )
-    connection_rule(tl, mem2_to_proc, metadata = return_metadata)
-
-    proc_to_mem2 = ConnectionRule([
-            Offset((1,0), "memory_out", "in[0]"),
-            Offset((1,-1), "memory_out", "in[1]")
-        ],
-        source_filter = proc_rule,
-        dest_filter = mem2_rule,
-    )
-    connection_rule(tl, proc_to_mem2, metadata = request_metadata)
-
-    ########################### 
-    # Connect 1 port memories #
-    ########################### 
-
-    mem1_to_proc = ConnectionRule(
-        [Offset((-1,0), "out[0]", "memory_in")],
-        source_filter = mem1_rule,
-        dest_filter = proc_rule,
-    )
-    connection_rule(tl, mem1_to_proc, metadata = return_metadata)
-
-    proc_to_mem1 = ConnectionRule(
-        [Offset((1,0), "memory_out", "in[0]")],
-        source_filter = proc_rule,
-        dest_filter = mem1_rule,
-
-    )
-    connection_rule(tl, proc_to_mem1, metadata = return_metadata)
+    for rule in memory_return_rules(style)
+        connection_rule(toplevel, rule, metadata = return_metadata)
+    end
 
     return nothing
 end

@@ -57,7 +57,7 @@ abstract type MapConstructor end
 # Invariants on the type:
 #
 # - Frequency and Multi are concrete Bool and cannot both be `true`.
-struct KC{Frequency, Multi} <: Architecture
+struct KC{Frequency, Multi} <: RuleSet
     # Inner constructor to enforce invariants on the type parameters.
     # Specifically, need to make sure "Frequency" and "Multi" are both
     # booleans and not both "Bool" at the same time.

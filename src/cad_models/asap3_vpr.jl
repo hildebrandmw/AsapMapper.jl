@@ -1,15 +1,15 @@
 # Model of "Asap3" for VPR. Only big difference is that memories occupy the
 # whole bottom row, instead of an isthmus of processors.
 
-function asap3_vpr(num_links,A)
-    arch = TopLevel{A,2}("asap3_vpr")
+function asap3_vpr(style)
+    arch = TopLevel{2}("asap3_vpr")
 
     ####################
     # Normal Processor #
     ####################
 
     # Get a processor tile and instantiate it.
-    processor = build_processor_tile(num_links)
+    processor = build_processor_tile(style)
     for r in 0:29, c in 0:31
         add_child(arch, processor, CartesianIndex(r,c))
     end
@@ -17,7 +17,7 @@ function asap3_vpr(num_links,A)
 	####################
 	# Memory Processor #
 	####################
-	memory_processor = build_processor_tile(num_links, include_memory = true)
+	memory_processor = build_processor_tile(style, include_memory = true)
 	for r = 30, c = 0:31
         add_child(arch, memory_processor, CartesianIndex(r,c))
 	end
@@ -33,13 +33,13 @@ function asap3_vpr(num_links,A)
 	#################
 	# Input Handler #
 	#################
-	input_handler = build_input_handler(1)
+	input_handler = build_input_handler(style)
     add_child(arch, input_handler, CartesianIndex(0,-1))
 
 	##################
 	# Output Handler #
 	##################
-	output_handler = build_output_handler(1)
+	output_handler = build_output_handler(style)
     add_child(arch, output_handler, CartesianIndex(0,32))
 
 	connect_processors(arch, num_links)

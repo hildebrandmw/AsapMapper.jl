@@ -79,9 +79,9 @@ function skeleton_dump(m::Map)
     for (name, address_path) in m.mapping.nodes
         node = getnode(m.taskgraph, name)
         
-        addr = Mapper2.MapperCore.getaddress(m.architecture,address_path)
+        addr = Mapper2.MapperCore.getaddress(m.toplevel,address_path)
 
-        component = m.architecture[address_path]
+        component = m.toplevel[address_path]
         core_name = component.metadata["pm_name"]
         core_type = component.metadata["pm_type"]
 
@@ -126,12 +126,12 @@ function populate_routes!(jsn,m)
     return nothing
 end
 
-function extract_routings(m::Map{A}) where A
-    arch = m.architecture
+function extract_routings(m::Map)
+    arch = m.toplevel
     routings = Dict{RoutingTuple,Any}()
     for (edge, graph) in zip(m.taskgraph.edges, m.mapping.edges)
         # Skip un-routed edges.
-        needsrouting(A, edge) || continue
+        needsrouting(rules(m), edge) || continue
 
         # Build the route tuple
         source_task = first(getsources(edge)) 
