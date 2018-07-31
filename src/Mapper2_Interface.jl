@@ -151,7 +151,7 @@ end
 # Must extend the "move" and "swap" functions to update the auxiliary
 # maxheap every time a node is moved for correct handling of the maximum
 # task-to-core ratio.
-function SA.move(sa::SAStruct{KC{true, false}}, index, spot)
+function SA.move(sa::SAStruct{KC{true}}, index, spot)
     node = sa.nodes[index]
     sa.grid[SA.location(node)] = 0
     SA.assign(node, spot)
@@ -165,7 +165,7 @@ function SA.move(sa::SAStruct{KC{true, false}}, index, spot)
     update!(sa.aux.ratio_max_heap, node.maxheap_handle, ratio)
 end
 
-function SA.swap(sa::SAStruct{KC{true, false}}, node1, node2)
+function SA.swap(sa::SAStruct{KC{true}}, node1, node2)
     # Get references to these objects to make life easier.
     n1 = sa.nodes[node1]
     n2 = sa.nodes[node2]
@@ -189,7 +189,7 @@ function SA.swap(sa::SAStruct{KC{true, false}}, node1, node2)
 end
 
 # Constructor for RankedNodes.
-function Mapper2.SA.buildnode(::KC{true, false}, n::TaskgraphNode, x)
+function Mapper2.SA.buildnode(::KC{true}, n::TaskgraphNode, x)
     rank = getrank(n).normalized_rank
     handle = n.metadata["heap_handle"]
     # Initialize all nodes to think they are the max ratio. Code for first move
@@ -198,7 +198,7 @@ function Mapper2.SA.buildnode(::KC{true, false}, n::TaskgraphNode, x)
 end
 
 # Get the address data for each node.
-function Mapper2.SA.build_address_data(::KC{true,false}, c::Component)
+function Mapper2.SA.build_address_data(::KC{true}, c::Component)
     rank = getrank(c).normalized_rank
     return rank
 end
@@ -207,62 +207,9 @@ end
 #
 # Take the maximum ratio from the top of the ratio max heap and apply the
 # penalty term to it.
-function Mapper2.SA.aux_cost(::KC{true,false}, sa::SAStruct)
+function Mapper2.SA.aux_cost(::KC{true}, sa::SAStruct)
     return sa.aux.task_penalty_multiplier * top(sa.aux.ratio_max_heap)
 end
-
-# ----------------------------------- #
-# Extensions for Heterogenous Mapping #
-# ----------------------------------- #
-
-# Use an enum to encode nodes by their class. Non-processor nodes will recieve
-# a "neutral" class and not be penalized. Don't bother marking "high_performance"
-# nodes as they can only be mapped to high_performance cores.
-@enum NodeClass low_power neutral
-
-mutable struct HeterogenousNode{T} <: Mapper2.SA.SANode
-    location    :: T
-    out_edges   :: Vector{Int64}
-    in_edges    :: Vector{Int64}
-    # Keep track of the type of the node
-    class       :: NodeClass
-end
-
-function Mapper2.SA.buildnode(::KC{false,true}, n::TaskgraphNode, x)
-    if islowpower(n)
-        class = low_power
-    else
-        class = neutral
-    end
-
-    return HeterogenousNode(x, Int64[], Int64[], class)
-end
-
-# Extend the "address_cost" method to penalize low_power tasks mapped to non
-# low_power components.
-function Mapper2.SA.address_cost(::KC{false,true}, sa::SAStruct, node::SA.SANode)
-    if node.class == neutral
-        return zero(Float64)
-
-    # If this entry in the "address_data" struct is "false", this is not a low
-    # power location.
-    elseif !sa.address_data[SA.location(node)]
-        return zero(Float64)
-
-    # Otherwise, we have a low_power node mapped to a non-low_power component.
-    else
-        # TODO: Make this a variable penalty
-        return 5.0
-    end
-end
-
-# Return a boolean if this component is a low_power component. This is used
-# to penalize mappings where low_power nodes are mapped to non-low_power 
-# components
-function Mapper2.SA.build_address_data(::KC{false,true}, c::Component)
-    return islowpower(c)
-end
-
 
 ################################################################################
 # Routing

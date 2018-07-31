@@ -1,4 +1,3 @@
-# Dispatch function.
 function build_architecture(c::PMConstructor, json_dict)
     # Get the architecture from the options dictionary.
     options = json_dict[_options_path_]
@@ -7,15 +6,14 @@ function build_architecture(c::PMConstructor, json_dict)
     # If a custom FunctionCall is passed - use that as an architecture
     # constructor. Otherwise, parse through the passed string to decode the
     # architecture.
-    if typeof(arch) <: FunctionCall
-        @debug "Dispatching Custom Architecture: $(arch)"
-        return call(arch)
+    if isa(arch, Function)
+        @debug "Dispatching Custom Architecture"
+        return arch()
     end
 
     num_links                = options[:num_links]
     use_profiled_links       = options[:use_profiled_links]
     use_task_suitability     = options[:use_task_suitability]
-    use_heterogenous_mapping = options[:use_heterogenous_mapping]
 
     # Perform manual dispatch based on the string.
     if arch == "Array_Asap3"
@@ -99,17 +97,11 @@ function experimental_transforms(toplevel::TopLevel, json_dict)
     options = json_dict[_options_path_]
 
     use_task_suitability = options[:use_task_suitability]
-    use_heterogenous_mapping = options[:use_heterogenous_mapping]
 
     # Normalize the rank assigned to each core based on its provided
     # maximum operating frequency.
     if use_task_suitability
         normalize_ranks(toplevel, options)
-
-    # Read through the special_assignments dictionary to assign cores as either
-    # high-performance or low-power
-    elseif use_heterogenous_mapping
-        specialize_cores(toplevel, options)
     end
 end
 
@@ -167,54 +159,4 @@ function normalize_ranks(toplevel::TopLevel, options)
     end
 
     @debug "$ranks"
-end
-
-# Specialize processor cores as either "high-performance" or "low-power".
-function specialize_cores(toplevel::TopLevel, options::Dict)
-    # Iterate through all processor types, add metadata based on their 
-    # annotation.
-    all_components = [toplevel[path] for path in walk_children(toplevel)]
-
-    # Counters for debugging
-    num_low_power = 0
-    num_high_performance = 0
-
-    for component in all_components
-        # Default memory processors to high-performance for now. 
-        # TODO: Rethink if this is the right thing todo. Since memories tend to
-        # be highly utilized, it's probably okay for now.
-        if ismemoryproc(component)
-            add_highperformance(component)
-            num_high_performance += 1
-
-        # Get the annotation for the component. Throw an error for now if 
-        # "mapper_annotation" is not found for debugging purposes.
-        elseif isproc(component)
-            annotation = component.metadata["mapper_annotation"]
-            specialization = annotation["specialization"]
-
-            if specialization == "low_power"
-                add_lowpower(component)
-                num_low_power += 1
-
-            elseif specialization == "high_performance"
-                add_highperformance(component)
-
-                # Add the low_power attribute as well to allow low_power
-                # tasks to still be mapped to these processors.
-                add_lowpower(component)
-
-                num_high_performance += 1
-
-            else
-                throw(KeyError(specialization))
-            end
-        end
-    end
-
-    @debug """
-    Number of high performance cores: $num_high_performance
-
-    Number of low power cores: $num_low_power
-    """
 end

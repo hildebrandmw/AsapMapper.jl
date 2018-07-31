@@ -38,9 +38,6 @@ const MTypes = (
     input       = "input_handler",
     output      = "output_handler",
     memory      = memory_meta,
-    # Experimental high-performance vs low-power processor cores.
-    lowpower   = "low_power",
-    highperformance = "high_performance",
 )
 
 typekey() = "mapper_type"
@@ -97,9 +94,6 @@ make_output!(t::TN)      = (t.metadata[typekey()] = MTypes.output)
 make_proc!(t::TN)        = (t.metadata[typekey()] = MTypes.proc)
 make_memoryproc!(t::TN)  = (t.metadata[typekey()] = MTypes.memoryproc)
 make_memory!(t::TN, ports::Integer) = t.metadata[typekey()] = MTypes.memory(ports)
-# low-power high-performance stuff
-make_lowpower(t::TN) = (t.metadata[typekey()] = MTypes.lowpower)
-make_highperformance(t::TN) = (t.metadata[typekey()] = MTypes.highperformance)
 
 # Getting task -> core requirements.
 ismappable(t::TN)   = true

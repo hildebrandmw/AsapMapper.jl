@@ -130,7 +130,7 @@ function iproute(m::Map{A,2}) where {A}
     return m
 end
 
-function build_ip_model(m::Map{A,2}) where A
+function build_ip_model(m::Map{2})
     # Build the network data type.
     network = build_network(m)
 
@@ -262,7 +262,7 @@ function build_ip_model(m::Map{A,2}) where A
     return ip_model
 end
 
-function build_network(m::Map{A,2}) where A
+function build_network(m::Map{2})
     # First, build a light graph for the network given above.
     network = SimpleNetwork()
 

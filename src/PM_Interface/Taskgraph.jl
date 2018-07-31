@@ -26,11 +26,11 @@ function build_taskgraph(c::MapConstructor, json_dict::Dict)
 end
 
 taskgraph_ops(::PMConstructor) = (
-                                  transform_task_types,
-                                  compute_edge_metadata,
-                                  apply_link_weights,
-                                  experimental_transforms,
-                                 )
+    transform_task_types,
+    compute_edge_metadata,
+    apply_link_weights,
+    experimental_transforms,
+)
 
 function parse_input(t::Taskgraph, tasklist, options)
     # Check if packet_links will be included in the netlist.
@@ -260,59 +260,15 @@ end
 # Special, experimental transforms to turn on and off.
 function experimental_transforms(t::Taskgraph, options::Dict)
     use_task_suitability = options[:use_task_suitability]
-    use_heterogenous_mapping = options[:use_heterogenous_mapping]
     # Get callback for frequency assignment.
     # Can choose to either use data encoded directly in the taskgraph or to
     # generate synthetic data.
     if use_task_suitability
         read_task_ranks(t, options)
         normalize_ranks(t, options)
-    elseif use_heterogenous_mapping
-        assign_heterogenous_data(t, options)
     end
 
     return t
-end
-
-function assign_heterogenous_data(t::Taskgraph, options::Dict)
-    key = options[:task_rank_key]
-    # Iterate through each node in the taskgraph. If the node's metric rank
-    # is above the threshold, or if the node is a memory neighbor, assign it
-    # as high-performance.
-    #
-    # Only apply to processor types - leave all other types alone.
-
-    # Counters for debugging
-    num_high_performance = 0
-    num_low_power = 0
-
-    for node in getnodes(t)
-        haskey(node.metadata["measurements_dict"], "specialization") || continue
-
-        specialization = node.metadata["measurements_dict"]["specialization"]
-        if ismemoryproc(node)
-            make_highperformance(node)
-            num_high_performance += 1
-
-        elseif isproc(node)
-            if specialization == "high_performance"
-                make_highperformance(node)
-                num_high_performance += 1
-
-            elseif specialization == "low_power"
-                make_lowpower(node)
-                num_low_power += 1
-            else
-                throw(KeyError(specialization))
-            end
-        end
-    end
-
-    @debug """
-    Number of high-performance tasks: $num_high_performance
-
-    Number of low-power tasks: $num_low_power
-    """
 end
 
 function read_task_ranks(t::Taskgraph, options::Dict)

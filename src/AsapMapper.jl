@@ -25,6 +25,8 @@ export  place_and_route,
         # Architecture constructors
         asap4,
         asap3,
+        Rectangular,
+        Hexagonal,
         # Architecture types
         KC,
         # Misc
@@ -57,26 +59,16 @@ abstract type MapConstructor end
 # Invariants on the type:
 #
 # - Frequency and Multi are concrete Bool and cannot both be `true`.
-struct KC{Frequency, Multi} <: RuleSet
+struct KC{Frequency} <: RuleSet
     # Inner constructor to enforce invariants on the type parameters.
     # Specifically, need to make sure "Frequency" and "Multi" are both
     # booleans and not both "Bool" at the same time.
-    function KC{F,M}() where {F,M}
-        if !isa(F, Bool) || !isa(M, Bool)
+    function KC{F}() where {F}
+        if !isa(F, Bool)
             error("Please use Boolean type parameters for KC")
         end
-
-        if F && M
-            error("""
-                Parameters "Frequency" and "Multi" cannot both be `true`.
-                """
-            )
-        end
-        return new{F,M}()
+        return new{F}()
     end
-
-    # Convenience constructor
-    KC{F}() where F = KC{F,false}()
 end
 
 include("Helper.jl")
@@ -96,24 +88,7 @@ include("PNR.jl")
 
 #include("IP_Router/Router.jl")
 
-include("Plots/MappingPlots.jl")
-
-################################################################################
-# Useful for testing and debugging
-################################################################################
-
-function testmap()
-    # Build taskgraph - look in "apps" directory
-    path = joinpath(PKGDIR, "apps", "mapper_in_7.json")
-    options = Dict(
-        #:use_frequency => true,
-        #:frequency_penalty_start => 50.0,
-        #:num_links => 3,
-        #:architecture => FunctionCall(asap3, (2, KC{true,true})),
-        #:architecture => FunctionCall(asap3, (2, KC{true,false})),
-    )
-    return build_map(PMConstructor(path, options))
-end
+#include("Plots/MappingPlots.jl")
 
 ################################################################################
 # Generic Place and Route function.

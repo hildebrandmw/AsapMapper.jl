@@ -7,10 +7,10 @@ isnonranking(t) = isinput(t) || isoutput(t)
 
 struct PMConstructor{T <: Union{String,Dict}} <: MapConstructor
     file    ::T
-    options ::Dict{Symbol,Any}
+    options ::NamedTuple
 
     #--inner constructor
-    function PMConstructor(file::T, options = Dict{Symbol,Any}()) where T
+    function PMConstructor(file::T, options::NamedTuple = NamedTuple()) where T
         # Iterate through each opion in "kwargs" - ensure it is in the list of
         # options provided by "_defult_options_"
         default_options = _get_default_options()
@@ -123,9 +123,6 @@ function _get_default_options()
         # the metric for rank.
         :task_rank_key              => "Rank",
 
-        # Heterogenous mapping.
-        :use_heterogenous_mapping       => false,
-
         # Load Existing Maps
         # ------------------
 
@@ -157,7 +154,7 @@ function Base.parse(c::PMConstructor{<:Dict})
 end
 
 """
-    parse_options(internal::Dict, external::Dict)
+    parse_options(internal::NamedTuple, external::Dict)
 
 Parse the options passed internally and externally. Prune all external options
 that are not in the `default_options` dict and return a final options
@@ -165,7 +162,7 @@ dictionary with the following option precedences from highest to lowest:
 
 `internal`, `external`, `default`.
 """
-function parse_options(internal::Dict{Symbol,Any}, external::Dict)
+function parse_options(internal::NamedTuple, external::Dict)
     # Convert the keys of 'external' to symbols for uniformity.
     external_sym = Dict(Symbol(k) => v for (k,v) in external)
 
@@ -190,7 +187,7 @@ function parse_options(internal::Dict{Symbol,Any}, external::Dict)
 
     # Merge all results together. Use the precedence in the `merge` operation to
     # get this correct.
-    final_dict = merge(default_options, external_sym, internal)
+    final_dict = merge(default_options, external_sym, Dict(pairs(internal)))
 
     # Do any global actions with side-effects here.
     parse_verbosity(final_dict[:verbosity])
@@ -222,9 +219,8 @@ function build_map(c::PMConstructor)
     options = json_dict[_options_path_]
 
     use_task_suitability = options[:use_task_suitability]
-    use_heterogenous_mapping = options[:use_heterogenous_mapping]
 
-    kc_rule = KC{use_task_suitability, use_heterogenous_mapping}()
+    kc_rule = KC{use_task_suitability}()
     m = Map(kc_rule,a,t)
     m.options = options
 
@@ -261,7 +257,6 @@ AuxStorage(x, heap) = AuxStorage(Float64(x), 0.0, heap)
 
 
 function asap_pnr(m::Map{A,D}) where {A,D}
-    println("Map type: ", A)
     if m.options[:use_task_suitability]
         # Allocate the max_heap to store ratio information and the handles vector.
         maxheap = DataStructures.mutable_binary_maxheap(Float64)
