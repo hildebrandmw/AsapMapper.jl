@@ -92,7 +92,7 @@ end
 end
 
 function getboxes(m::Map{2}, spacing, tilesize)
-    a = m.architecture
+    a = m.toplevel
     # Create draw boxes for each tile in the array.
     boxes = DrawBox[]
     for (name, child) in a.children
@@ -133,7 +133,7 @@ function getboxes(m::Map{2}, spacing, tilesize)
 end
 
 function getroutes(m::Map{2}, spacing, tilesize)
-    a = m.architecture
+    a = m.toplevel
     routes = DrawRoute[]
     for graph in m.mapping.edges
         x = Float64[]
@@ -170,7 +170,7 @@ function getroutes(m::Map{2}, spacing, tilesize)
 end
 
 function getlines(m::Map{2}, spacing, tilesize)
-    a = m.architecture
+    a = m.toplevel
     lines = DrawRoute[]
     for edge in getedges(m.taskgraph)
 
@@ -229,14 +229,14 @@ plot_ranks(m::Map; nbins = 10) = rankplot(m, nbins)
     m = r.args[1]
     nbins = r.args[2]
 
-    architecture = m.architecture
+    toplevel = m.toplevel
     taskgraph = m.taskgraph
 
     # Get the ranks from the tasks and processors
     taskranks = [getrank(task) for task in getnodes(taskgraph) if isproc(task)]
-    coreranks = [getrank(architecture[path])
-                 for path in walk_children(architecture)
-                 if isproc(architecture[path])]
+    coreranks = [getrank(toplevel[path])
+                 for path in walk_children(toplevel)
+                 if isproc(toplevel[path])]
 
     # Set up global plotting attributes.
     legend := false
