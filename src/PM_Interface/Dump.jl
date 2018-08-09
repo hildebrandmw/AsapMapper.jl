@@ -147,8 +147,8 @@ function extract_routings(m::Map)
         # - network_id
         # - new_source_index
         # - new_dest_index
-        src_port_path = first(source_vertices(graph))
-        dst_port_path = first(sink_vertices(graph))
+        src_port_path = first(Mapper2.MapperGraphs.source_vertices(graph))
+        dst_port_path = first(Mapper2.MapperGraphs.sink_vertices(graph))
 
         src_metadata = arch[src_port_path].metadata
         network_id = get(src_metadata,"network_id",nothing)
@@ -176,7 +176,7 @@ end
 
 function make_offset_list(arch, g)
     path = CartesianIndex{2}[]
-    for p in linearize(g)
+    for p in Mapper2.MapperGraphs.linearize(g)
         # Skip global links since addresses they don't have an address
         isgloballink(p) && continue
         # Get the address from the path

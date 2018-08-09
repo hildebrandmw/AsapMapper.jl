@@ -153,9 +153,9 @@ end
 # task-to-core ratio.
 function SA.move(sa::SAStruct{KC{true}}, index, spot)
     node = sa.nodes[index]
-    sa.grid[SA.location(node)] = 0
+    sa.grid[Mapper2.SA.location(node)] = 0
     SA.assign(node, spot)
-    sa.grid[SA.location(node)] = index
+    sa.grid[Mapper2.SA.location(node)] = index
 
     # Get the rank for the core at the location of the node and update this
     # node's handle in the heap.

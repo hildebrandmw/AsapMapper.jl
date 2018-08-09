@@ -295,13 +295,13 @@ function asap_pnr(m::Map{A,D}) where {A,D}
         end
     else
         for i in 1:m.options[:num_retries]
-            try
+        #    try
                 place!(m)
                 route!(m)
                 check_routing(m; quiet = true) && break
-            catch err
-                @error "Received routing error: $err. Trying again."
-            end
+        #     catch err
+        #         @error "Received routing error: $err. Trying again."
+        #     end
         end
     end
 

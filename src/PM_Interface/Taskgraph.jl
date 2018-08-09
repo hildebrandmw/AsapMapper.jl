@@ -247,7 +247,7 @@ function apply_link_weights(t::Taskgraph, options::Dict)
             num_writes = measurements["num_writes"]
             scaled_cost = (num_writes - min_writes) / range
             cost = max(
-                       ceil(scaled_cost, ndigits, 2),
+                       ceil(scaled_cost, digits = ndigits, base = 2),
                        minimum_link_weight
                       )
 
@@ -344,7 +344,7 @@ function normalize_ranks(t::Taskgraph, options::Dict)
         # rank.
         else 
             taskrank.normalized_rank = max(
-                ceil(rank / rank_max, num_digits, 2),
+                ceil(rank / rank_max, digits = num_digits, base = 2),
                 min_val,
             )
         end

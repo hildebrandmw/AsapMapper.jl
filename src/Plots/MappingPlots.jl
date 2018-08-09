@@ -138,7 +138,7 @@ function getroutes(m::Map{2}, spacing, tilesize)
     for graph in m.mapping.edges
         x = Float64[]
         y = Float64[]
-        for path in linearize(graph)
+        for path in Mapper2.MapperGraphs.linearize(graph)
             # Only look at global port paths.
             isglobalport(path) || continue
             # Get the address from the path.

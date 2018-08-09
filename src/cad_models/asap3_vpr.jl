@@ -42,8 +42,8 @@ function asap3_vpr(style)
 	output_handler = build_output_handler(style)
     add_child(arch, output_handler, CartesianIndex(0,32))
 
-	connect_processors(arch, num_links)
-    connect_io(arch, num_links)
-	connect_memories(arch)
+	connect_processors(arch, style)
+    connect_io(arch, style)
+	connect_memories(arch, style)
 	return arch
 end
