@@ -33,7 +33,7 @@ function build_architecture(c::PMConstructor, json_dict)
     return toplevel
 end
 
-function Base.ismatch(c::Component, pm_base_type)
+function ismatch(c::Component, pm_base_type)
     haskey(c.metadata, typekey()) || (return false)
     # Check the two implemented mapper attributes for processors
     if pm_base_type == "Processor_Core"
