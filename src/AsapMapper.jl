@@ -1,45 +1,34 @@
 module AsapMapper
 
-const is07 = VERSION > v"0.7.0-"
-
 using Mapper2
 using IterTools
 using JSON
-using Missings
-is07 ? (using Logging) : (using MicroLogging)
-using NamedTuples
-using Compat
+using Logging
 using DataStructures
 
 # Set up directory paths
 const SRCDIR = @__DIR__
 const PKGDIR = dirname(SRCDIR)
-const DBDIR = joinpath(PKGDIR, "db")
 
-set_logging(level) = configure_logging(AsapMapper, min_level=level)
+#set_logging(level) = configure_logging(AsapMapper, min_level=level)
+set_logging(level) = nothing
 
 export  place_and_route,
         testmap,
         asap_place,
         parallel_map_and_save,
-        place,
-        route,
+        place!,
+        route!,
         set_logging,
         # Taskgraph constructors
         load_taskgraph,
         # Architecture constructors
         asap4,
         asap3,
+        Rectangular,
+        Hexagonal,
         # Architecture types
-        KCStandard,
-        KCNoWeight,
-        # Experiments
-        Experiment,
-        SharedPlacement,
-        MultiArchitecture,
-        # Results
-        Result,
-        SharedPlacementResult,
+        KC,
         # Misc
         FunctionCall,
         call,
@@ -70,26 +59,16 @@ abstract type MapConstructor end
 # Invariants on the type:
 #
 # - Frequency and Multi are concrete Bool and cannot both be `true`.
-struct KC{Frequency, Multi} <: Architecture
+struct KC{Frequency} <: RuleSet
     # Inner constructor to enforce invariants on the type parameters.
     # Specifically, need to make sure "Frequency" and "Multi" are both
     # booleans and not both "Bool" at the same time.
-    function KC{F,M}() where {F,M}
-        if !isa(F, Bool) || !isa(M, Bool)
+    function KC{F}() where {F}
+        if !isa(F, Bool)
             error("Please use Boolean type parameters for KC")
         end
-
-        if F && M
-            error("""
-                Parameters "Frequency" and "Multi" cannot both be `true`.
-                """
-            )
-        end
-        return new{F,M}()
+        return new{F}()
     end
-
-    # Convenience constructor
-    KC{F}() where F = KC{F,false}()
 end
 
 include("Helper.jl")
@@ -108,39 +87,11 @@ include("Mapper2_Interface.jl")
 include("PNR.jl")
 
 #include("IP_Router/Router.jl")
-
-include("Plots/MappingPlots.jl")
-
-################################################################################
-# Useful for testing and debugging
-################################################################################
-
-function testmap()
-    # Build taskgraph - look in "apps" directory
-    path = joinpath(PKGDIR, "apps", "mapper_in_7.json")
-    options = Dict(
-        #:use_frequency => true,
-        #:frequency_penalty_start => 50.0,
-        #:num_links => 3,
-        #:architecture => FunctionCall(asap3, (2, KC{true,true})),
-        #:architecture => FunctionCall(asap3, (2, KC{true,false})),
-    )
-    return build_map(PMConstructor(path, options))
-end
+#include("Plots/MappingPlots.jl")
 
 ################################################################################
 # Generic Place and Route function.
 ################################################################################
-
-function swoop(profilepath::String)
-    savedir = joinpath(PKGDIR, "apps")
-    # Create a name for this in the save directory.
-    savename = augment(savedir, "mapper_in.json")
-    savepath = joinpath(savedir, savename)
-
-    println("Swooping")
-    cp(profilepath, savepath)
-end
 
 function place_and_route(profile_path, dump_path)
     # swoop(profile_path)

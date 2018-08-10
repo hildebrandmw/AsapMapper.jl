@@ -38,8 +38,8 @@ abstract type MapDump end
 struct MapDumpNode <: MapDump
     name            ::String
     address         ::Tuple
-    core_name       ::Union{String,Void}
-    core_type       ::Union{String,Void}
+    core_name       ::Union{String,Nothing}
+    core_type       ::Union{String,Nothing}
     leaf_node_dict  ::Dict{String,Any}
 end
 
@@ -55,7 +55,7 @@ function MapDumpNode(name, address::T, core_name, core_type) where T
 end
 
 struct MapDumpRoute <: MapDump
-    network_id      ::Union{Int,Void}
+    network_id      ::Union{Int,Nothing}
     new_source_index::_index_types
     new_dest_index  ::_index_types
     source_task     ::_name_types
@@ -79,9 +79,9 @@ function skeleton_dump(m::Map)
     for (name, address_path) in m.mapping.nodes
         node = getnode(m.taskgraph, name)
         
-        addr = Mapper2.MapperCore.getaddress(m.architecture,address_path)
+        addr = Mapper2.MapperCore.getaddress(m.toplevel,address_path)
 
-        component = m.architecture[address_path]
+        component = m.toplevel[address_path]
         core_name = component.metadata["pm_name"]
         core_type = component.metadata["pm_type"]
 
@@ -126,12 +126,12 @@ function populate_routes!(jsn,m)
     return nothing
 end
 
-function extract_routings(m::Map{A}) where A
-    arch = m.architecture
+function extract_routings(m::Map)
+    arch = m.toplevel
     routings = Dict{RoutingTuple,Any}()
     for (edge, graph) in zip(m.taskgraph.edges, m.mapping.edges)
         # Skip un-routed edges.
-        needsrouting(A, edge) || continue
+        needsrouting(rules(m), edge) || continue
 
         # Build the route tuple
         source_task = first(getsources(edge)) 
@@ -147,8 +147,8 @@ function extract_routings(m::Map{A}) where A
         # - network_id
         # - new_source_index
         # - new_dest_index
-        src_port_path = first(source_vertices(graph))
-        dst_port_path = first(sink_vertices(graph))
+        src_port_path = first(Mapper2.MapperGraphs.source_vertices(graph))
+        dst_port_path = first(Mapper2.MapperGraphs.sink_vertices(graph))
 
         src_metadata = arch[src_port_path].metadata
         network_id = get(src_metadata,"network_id",nothing)
@@ -176,7 +176,7 @@ end
 
 function make_offset_list(arch, g)
     path = CartesianIndex{2}[]
-    for p in linearize(g)
+    for p in Mapper2.MapperGraphs.linearize(g)
         # Skip global links since addresses they don't have an address
         isgloballink(p) && continue
         # Get the address from the path

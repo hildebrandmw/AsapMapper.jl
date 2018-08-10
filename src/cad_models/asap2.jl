@@ -1,5 +1,5 @@
-function asap2(num_links, A)
-    arch = TopLevel{A,2}("asap2")
+function asap2(style)
+    arch = TopLevel{2}("asap2")
 
     processor = build_processor_tile(num_links) 
     for r in 0:11, c in 0:12

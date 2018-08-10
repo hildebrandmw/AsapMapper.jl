@@ -1,6 +1,4 @@
 using AsapMapper
-using Base.Test
+using Test
 
-include("database.jl")
 include("models.jl")
-#include("sharedplacement.jl")

@@ -12,7 +12,7 @@ struct DrawBox
     y           ::Float64
     width       ::Float64
     height      ::Float64
-    fill        ::Symbol    
+    fill        ::Symbol
     core_bin    ::Union{Float64,Missing}
     task_bin    ::Union{Float64,Missing}
 end
@@ -30,7 +30,7 @@ gety(d::DrawBox) = [d.y, d.y, d.y + d.height, d.y + d.height, d.y]
 lowerleft(d::DrawBox) = (d.x + d.width/4, d.y + d.height/4)
 upperright(d::DrawBox) = (d.x + 3*d.width/4, d.y + 3*d.height/4)
 
-# Methds for getting upper right/lower left triangles for a box. Was 
+# Methds for getting upper right/lower left triangles for a box. Was
 # experimenting with using color to represent various frequency values and core
 # values. This didn't really work so well.
 utrianglex(d::DrawBox) = [d.x, d.x + d.width, d.x, d.x]
@@ -91,8 +91,8 @@ end
     end
 end
 
-function getboxes(m::Map{A,2}, spacing, tilesize) where A
-    a = m.architecture
+function getboxes(m::Map{2}, spacing, tilesize)
+    a = m.toplevel
     # Create draw boxes for each tile in the array.
     boxes = DrawBox[]
     for (name, child) in a.children
@@ -132,13 +132,13 @@ function getboxes(m::Map{A,2}, spacing, tilesize) where A
     return boxes
 end
 
-function getroutes(m::Map{A,2}, spacing, tilesize) where A
-    a = m.architecture
+function getroutes(m::Map{2}, spacing, tilesize)
+    a = m.toplevel
     routes = DrawRoute[]
     for graph in m.mapping.edges
         x = Float64[]
         y = Float64[]
-        for path in linearize(graph)
+        for path in Mapper2.MapperGraphs.linearize(graph)
             # Only look at global port paths.
             isglobalport(path) || continue
             # Get the address from the path.
@@ -169,8 +169,8 @@ function getroutes(m::Map{A,2}, spacing, tilesize) where A
     return routes
 end
 
-function getlines(m::Map{A,2}, spacing, tilesize) where A
-    a = m.architecture
+function getlines(m::Map{2}, spacing, tilesize)
+    a = m.toplevel
     lines = DrawRoute[]
     for edge in getedges(m.taskgraph)
 
@@ -207,7 +207,7 @@ end
 # Main functions
 ################################################################################
 
-function plot_route(m::Map{A,2}, spacing = 10, tilesize = 20) where A
+function plot_route(m::Map{2}, spacing = 10, tilesize = 20)
     boxes = getboxes(m, spacing, tilesize)
     routes = getroutes(m, spacing, tilesize)
     return routeplot(boxes, routes)
@@ -229,15 +229,15 @@ plot_ranks(m::Map; nbins = 10) = rankplot(m, nbins)
     m = r.args[1]
     nbins = r.args[2]
 
-    architecture = m.architecture
+    toplevel = m.toplevel
     taskgraph = m.taskgraph
 
     # Get the ranks from the tasks and processors
     taskranks = [getrank(task) for task in getnodes(taskgraph) if isproc(task)]
-    coreranks = [getrank(architecture[path]) 
-                 for path in walk_children(architecture)
-                 if isproc(architecture[path])]
-    
+    coreranks = [getrank(toplevel[path])
+                 for path in walk_children(toplevel)
+                 if isproc(toplevel[path])]
+
     # Set up global plotting attributes.
     legend := false
     grid   := false
@@ -255,8 +255,8 @@ plot_ranks(m::Map; nbins = 10) = rankplot(m, nbins)
 
     subplot := 3
     @series begin
-        [t.quartile_normalized_rank 
-         for t in taskranks 
+        [t.quartile_normalized_rank
+         for t in taskranks
          if !ismissing(t.quartile_normalized_rank)
         ]
     end
@@ -268,8 +268,8 @@ plot_ranks(m::Map; nbins = 10) = rankplot(m, nbins)
 
     subplot := 4
     @series begin
-        [c.quartile_normalized_rank 
-         for c in coreranks 
+        [c.quartile_normalized_rank
+         for c in coreranks
          if !ismissing(c.quartile_normalized_rank)
         ]
     end

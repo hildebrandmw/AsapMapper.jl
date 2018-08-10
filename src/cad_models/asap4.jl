@@ -1,5 +1,5 @@
-function asap4(num_links, A)
-    arch = TopLevel{A,2}("asap4")
+function asap4(style)
+    arch = TopLevel{2}("asap4")
 
     # Extra parameters
     num_fifos = 2

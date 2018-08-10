@@ -109,13 +109,13 @@ function build_ldcs_processor_tile(num_links,
     comp = Component(name)
     # Add the circuit switched ports
     for dir in directions
-        for (suffix,class)  in zip(("_in", "_out"), ("input", "output"))
+        for (suffix,class)  in zip(("_in", "_out"), (Input, Output))
             port_name = join((dir, suffix))
             metadata = make_port_metadata(dir, class, num_links)
             add_port(comp, port_name, class, num_links, metadata = metadata)
         end
     end
-    for (suffix,class)  in zip(("_in", "_out"), ("input", "output"))
+    for (suffix,class)  in zip(("_in", "_out"), (Input, Output))
         port_name = join(("ldcs", suffix))
         metadata = make_port_metadata("ldcs", class, num_links)
         add_port(comp, port_name, class, num_links, metadata = metadata)
