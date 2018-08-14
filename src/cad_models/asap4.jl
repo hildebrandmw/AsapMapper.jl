@@ -7,7 +7,7 @@ function asap4(style)
     ####################
     # Normal Processor #
     ####################
-    processor = build_processor_tile(num_links)
+    processor = build_processor_tile(style)
     for r in 0:23, c in 0:26
         add_child(arch, processor, CartesianIndex(r,c))
     end
@@ -18,7 +18,7 @@ function asap4(style)
     ####################
     # Memory Processor #
     ####################
-    memory_processor = build_processor_tile(num_links, include_memory = true)
+    memory_processor = build_processor_tile(style, include_memory = true)
     for r = 24, c = 0:26
         add_child(arch, memory_processor, CartesianIndex(r,c))
     end
@@ -57,8 +57,8 @@ function asap4(style)
     #######################
     # Global Interconnect #
     #######################
-    connect_processors(arch, num_links)
-    connect_io(arch, num_links)
-    connect_memories(arch)
+    connect_processors(arch, style)
+    connect_io(arch, style)
+    connect_memories(arch, style)
     return arch
 end

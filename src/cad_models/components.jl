@@ -429,9 +429,9 @@ end
 ##############################
 #       INPUT HANDLER        #
 ##############################
-function build_input_handler(style)
+build_input_handler(style::Style) = build_input_handler(iolinks(style))
+function build_input_handler(num_links::Integer)
     component = Component("input_handler", metadata = input_handler_metadata())
-    num_links = iolinks(style)
     add_port(
         component, 
         "out", 
@@ -446,9 +446,9 @@ end
 ##############################
 #       OUTPUT HANDLER       #
 ##############################
-function build_output_handler(style)
+build_output_handler(style::Style) = build_output_handler(iolinks(style))
+function build_output_handler(num_links::Integer)
     component = Component("output_handler", metadata = output_handler_metadata())
-    num_links = iolinks(style)
     add_port(
         component, 
         "in", 

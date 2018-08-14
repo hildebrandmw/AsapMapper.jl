@@ -59,7 +59,9 @@ abstract type MapConstructor end
 # Invariants on the type:
 #
 # - Frequency and Multi are concrete Bool and cannot both be `true`.
-struct KC{Frequency} <: RuleSet
+abstract type AbstractKC <: RuleSet end
+
+struct KC{Frequency} <: AbstractKC
     # Inner constructor to enforce invariants on the type parameters.
     # Specifically, need to make sure "Frequency" and "Multi" are both
     # booleans and not both "Bool" at the same time.
@@ -70,6 +72,7 @@ struct KC{Frequency} <: RuleSet
         return new{F}()
     end
 end
+struct Asap2 <: AbstractKC end
 
 include("Helper.jl")
 include("Metadata.jl")
@@ -81,13 +84,14 @@ include("cad_models/cad_models.jl")
 
 # Include files
 include("PM_Interface/PM_Interface.jl")
+include("Simulator_Interface.jl")
 include("Mapper2_Interface.jl")
 
 # Customize placement/routing plus architectures.
 include("PNR.jl")
 
 #include("IP_Router/Router.jl")
-#include("Plots/MappingPlots.jl")
+include("Plots/MappingPlots.jl")
 
 ################################################################################
 # Generic Place and Route function.

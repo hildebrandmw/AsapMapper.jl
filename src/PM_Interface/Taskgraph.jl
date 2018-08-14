@@ -12,14 +12,14 @@ const _accepted_task_types = (
 
 build_taskgraph(c::MapConstructor) = build_taskgraph(c, parse(c))
 function build_taskgraph(c::MapConstructor, json_dict::Dict)
-    t = Taskgraph()
+    taskgraph = Taskgraph()
     options = json_dict[_options_path_]
-    parse_input(t, json_dict["task_structure"], options)
+    parse_input(taskgraph, json_dict["task_structure"], options)
 
 
     # post-processing routines
     for op in taskgraph_ops(c)
-        @debug "Running Taskgraph Trasnform $op"
+        @debug "Running Taskgraph Transform $op"
         t = op(t, options)
     end
     return t
@@ -191,7 +191,7 @@ function apply_link_weights(t::Taskgraph, options::Dict)
     minimum_link_weight = 2.0 ^ (-ndigits)
 
     # Weight to assign memory links.
-    memory_link_weight = 5.0
+    memory_link_weight = 100.0
 
     # Need to still apply weight in order to get memory modules to work correctly.
     # Just assigns unit weights to each non-memory link and a weight of 5.0

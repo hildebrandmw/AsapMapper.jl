@@ -122,6 +122,7 @@ function _get_default_options()
         # Set which entry in the "Measurements Dict" is to be used to select
         # the metric for rank.
         :task_rank_key              => "Rank",
+        :ruleset => nothing,
 
         # Load Existing Maps
         # ------------------
@@ -147,7 +148,7 @@ function Base.parse(c::PMConstructor{String})
 end
 
 function Base.parse(c::PMConstructor{<:Dict})
-    dict = c.file
+    dict = deepcopy(c.file)
     final_options = parse_options(c.options, dict["mapper_options"])
     dict["mapper_options"] = final_options
     return dict
@@ -162,7 +163,7 @@ dictionary with the following option precedences from highest to lowest:
 
 `internal`, `external`, `default`.
 """
-function parse_options(internal::NamedTuple, external::Dict)
+function parse_options(internal::NamedTuple, external::Dict = Dict{Symbol,Any}())
     # Convert the keys of 'external' to symbols for uniformity.
     external_sym = Dict(Symbol(k) => v for (k,v) in external)
 
@@ -187,7 +188,9 @@ function parse_options(internal::NamedTuple, external::Dict)
 
     # Merge all results together. Use the precedence in the `merge` operation to
     # get this correct.
-    final_dict = merge(default_options, external_sym, Dict(pairs(internal)))
+    final_dict = Dict{Symbol,Any}(
+        merge(default_options, external_sym, Dict(pairs(internal)))
+    )
 
     # Do any global actions with side-effects here.
     parse_verbosity(final_dict[:verbosity])
@@ -205,6 +208,14 @@ function parse_verbosity(verbosity)
     end
 end
 
+function getrule(options)
+    if options[:ruleset] == nothing
+        return KC{options[:use_task_suitability]}()
+    else
+        return options[:ruleset]
+    end
+end
+
 ################################################################################
 # build_map - Top level function for creating Map objects from the Project
 #   Manager.
@@ -218,10 +229,8 @@ function build_map(c::PMConstructor)
     # build the map and attach the options dictionary to it.
     options = json_dict[_options_path_]
 
-    use_task_suitability = options[:use_task_suitability]
-
-    kc_rule = KC{use_task_suitability}()
-    m = Map(kc_rule,a,t)
+    rule = getrule(options)
+    m = Map(rule,a,t)
     m.options = options
 
     # Load an existing map if provided with one.
@@ -254,6 +263,15 @@ mutable struct AuxStorage{T}
 end
 
 AuxStorage(x, heap) = AuxStorage(Float64(x), 0.0, heap)
+
+# Placement for Asap2
+function asap_pnr(m::Map{D,Asap2}; kwargs...) where {D}
+    # Build the aux storage for this type.
+    aux = build_aux(m)
+    place!(m, aux = aux; kwargs...)
+    route!(m)
+    return m
+end
 
 
 function asap_pnr(m::Map{A,D}) where {A,D}
