@@ -132,7 +132,7 @@ function parse_input!(::SimConstructor, taskgraph, json_dict::AbstractDict)
 
         # Memory -> Proc
         metadata = Dict{String,Any}(
-            "pm_class" => "Memory_Return_Link",
+            "pm_class" => "Memory_Response_Link",
             "measurements_dict" => Dict{String,Any}(),
             "route_link" => true,
             "preserve_dest" => false,
