@@ -1,7 +1,5 @@
-julia 0.7-
+julia 0.7
 Mapper2
 IterTools
 JSON
 DataStructures
-Plots
-GR

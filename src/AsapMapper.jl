@@ -6,6 +6,7 @@ using JSON
 using Logging
 using DataStructures
 
+import Base: parse
 # Set up directory paths
 const SRCDIR = @__DIR__
 const PKGDIR = dirname(SRCDIR)
@@ -59,7 +60,9 @@ abstract type MapConstructor end
 # Invariants on the type:
 #
 # - Frequency and Multi are concrete Bool and cannot both be `true`.
-struct KC{Frequency} <: RuleSet
+abstract type AbstractKC <: RuleSet end
+
+struct KC{Frequency} <: AbstractKC
     # Inner constructor to enforce invariants on the type parameters.
     # Specifically, need to make sure "Frequency" and "Multi" are both
     # booleans and not both "Bool" at the same time.
@@ -70,6 +73,7 @@ struct KC{Frequency} <: RuleSet
         return new{F}()
     end
 end
+struct Asap2 <: AbstractKC end
 
 include("Helper.jl")
 include("Metadata.jl")
@@ -81,6 +85,7 @@ include("cad_models/cad_models.jl")
 
 # Include files
 include("PM_Interface/PM_Interface.jl")
+include("Simulator_Interface.jl")
 include("Mapper2_Interface.jl")
 
 # Customize placement/routing plus architectures.
@@ -100,7 +105,7 @@ function place_and_route(profile_path, dump_path)
     m = build_map(c)
 
     # Run place-and-route
-    if typeof(m.options[:existing_map]) <: Void
+    if typeof(m.options[:existing_map]) <: Nothing
         m = asap_pnr(m)
     end
     # Dump mapping to given dump path

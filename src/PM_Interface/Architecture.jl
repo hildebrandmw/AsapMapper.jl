@@ -61,7 +61,14 @@ function name_mappables(toplevel::TopLevel, json_dict)
         if !isaddress(toplevel, addr)
             # Suppress if to many warnings have been generated.
             if warnings_given < warning_limit
-                @warn "No address $addr found for core $(core["name"])."
+                # Check if core name is "nothing".
+                if core["name"] === nothing
+                    msg = "Address $addr not found"
+                else
+                    msg = "No address $addr found for core $(core["name"])."
+                end
+                @warn msg
+
                 warnings_given += 1
             elseif warnings_given == warning_limit
                 @warn "Suppressing further address warnings."

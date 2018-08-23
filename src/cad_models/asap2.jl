@@ -1,7 +1,7 @@
 function asap2(style)
     arch = TopLevel{2}("asap2")
 
-    processor = build_processor_tile(num_links) 
+    processor = build_processor_tile(style) 
     for r in 0:11, c in 0:12
         add_child(arch, processor, Address(r,c))
     end
@@ -11,7 +11,7 @@ function asap2(style)
     add_child(arch, processor, Address(12, 9))
 
     # Add the memory processors.
-    memory_processor = build_processor_tile(num_links, include_memory = true)
+    memory_processor = build_processor_tile(style, include_memory = true)
     for r in 12, c in (2, 3, 5, 6, 7, 8)
         add_child(arch, memory_processor, Address(r, c))
     end
@@ -28,8 +28,8 @@ function asap2(style)
     output_handler = build_output_handler(12)
     add_child(arch, output_handler, Address(0,13))
 
-    connect_processors(arch, num_links)
-    connect_memories(arch)
+    connect_processors(arch, style)
+    connect_memories(arch, style)
     connect_io_asap2(arch)
 
     return arch
