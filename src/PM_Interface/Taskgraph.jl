@@ -20,9 +20,9 @@ function build_taskgraph(c::MapConstructor, json_dict::Dict)
     # post-processing routines
     for op in taskgraph_ops(c)
         @debug "Running Taskgraph Transform $op"
-        t = op(t, options)
+        taskgraph = op(taskgraph, options)
     end
-    return t
+    return taskgraph
 end
 
 taskgraph_ops(::PMConstructor) = (

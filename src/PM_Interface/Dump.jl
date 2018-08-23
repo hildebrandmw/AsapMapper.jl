@@ -5,9 +5,9 @@ function dump_map(m::Map, filename::AbstractString)
     json_dict = Dict{String,Any}("task_structure" => collect(values(jsn)))
 
     record_info!(json_dict, m)
-    f = open(filename, "w")
-    print(f, json(json_dict, 2)) 
-    close(f)
+    open(filename, "w") do f
+        print(f, json(json_dict, 2)) 
+    end
     return nothing
 end
 

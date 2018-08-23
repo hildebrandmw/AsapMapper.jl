@@ -46,6 +46,9 @@ function asap4(style)
     for (r,c) ∈ zip((0,11,13,17), (-1, 28, -1, 28))
         add_child(arch, input_handler, CartesianIndex(r,c))
     end
+    # for (r,c) ∈ zip((5,6,5,6), (-1,-1,28,28))
+    #     add_child(arch, input_handler, CartesianIndex(r,c))
+    # end
     ##################
     # Output Handler #
     ##################

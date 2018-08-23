@@ -6,6 +6,7 @@ using JSON
 using Logging
 using DataStructures
 
+import Base: parse
 # Set up directory paths
 const SRCDIR = @__DIR__
 const PKGDIR = dirname(SRCDIR)
@@ -91,7 +92,7 @@ include("Mapper2_Interface.jl")
 include("PNR.jl")
 
 #include("IP_Router/Router.jl")
-include("Plots/MappingPlots.jl")
+#include("Plots/MappingPlots.jl")
 
 ################################################################################
 # Generic Place and Route function.
@@ -104,7 +105,7 @@ function place_and_route(profile_path, dump_path)
     m = build_map(c)
 
     # Run place-and-route
-    if typeof(m.options[:existing_map]) <: Void
+    if typeof(m.options[:existing_map]) <: Nothing
         m = asap_pnr(m)
     end
     # Dump mapping to given dump path
