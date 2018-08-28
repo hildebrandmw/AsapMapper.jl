@@ -92,7 +92,7 @@ include("Mapper2_Interface.jl")
 include("PNR.jl")
 
 #include("IP_Router/Router.jl")
-#include("Plots/MappingPlots.jl")
+include("Plots/MappingPlots.jl")
 
 ################################################################################
 # Generic Place and Route function.

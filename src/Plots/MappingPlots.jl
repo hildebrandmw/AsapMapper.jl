@@ -1,5 +1,6 @@
-using Plots
-gr()
+using RecipesBase
+#using Plots
+#gr()
 
 using Mapper2.MapperGraphs
 #pyplot()
@@ -48,17 +49,31 @@ end
 # --------------- #
 # Plotting Recipe #
 # --------------- #
-@userplot RoutePlot
-@recipe function f(r::RoutePlot)
+struct PlotWrapper{T}
+    map::Map
+end
+
+RoutePlot(x) = PlotWrapper{true}(x)
+RatsnestPlot(x) = PlotWrapper{false}(x)
+
+@recipe function f(r::PlotWrapper{T}) where T
+    # Unpack map
+    map = r.map
+    
+
+    # Set up parameters
+    spacing = 10
+    tilesize = 20
+
+    # Build boxes and routes
+    boxes = getboxes(map, spacing, tilesize)
+    routes = T ? getroutes(map, spacing, tilesize) : getlines(map, spacing, tilesize)
+
     # Set up plot attributes
     legend := false
     ticks  := nothing
     grid   := false
     yflip  := true
-
-
-    # Find the maximum ratio.
-    boxes = r.args[1]
 
     # Plot boxes
     seriestype := :shape
@@ -75,12 +90,10 @@ end
         end
     end
 
-
     seriestype := :path
     linewidth  := 2
 
     # Plot routes
-    routes = r.args[2]
     for route in routes
         @series begin
             linecolor := route.color
@@ -201,76 +214,4 @@ function getlines(m::Map{2}, spacing, tilesize)
         push!(lines, DrawRoute(x,y,color))
     end
     return lines
-end
-
-################################################################################
-# Main functions
-################################################################################
-
-function plot_route(m::Map{2}, spacing = 10, tilesize = 20)
-    boxes = getboxes(m, spacing, tilesize)
-    routes = getroutes(m, spacing, tilesize)
-    return routeplot(boxes, routes)
-end
-
-function plot_ratsnest(m::Map, spacing = 10, tilesize = 20)
-    boxes = getboxes(m, spacing, tilesize)
-    routes = getlines(m, spacing, tilesize)
-    return routeplot(boxes, routes)
-end
-
-################################################################################
-
-plot_ranks(m::Map; nbins = 10) = rankplot(m, nbins)
-
-@userplot rankplot
-
-@recipe function f(r::rankplot)
-    m = r.args[1]
-    nbins = r.args[2]
-
-    toplevel = m.toplevel
-    taskgraph = m.taskgraph
-
-    # Get the ranks from the tasks and processors
-    taskranks = [getrank(task) for task in getnodes(taskgraph) if isproc(task)]
-    coreranks = [getrank(toplevel[path])
-                 for path in walk_children(toplevel)
-                 if isproc(toplevel[path])]
-
-    # Set up global plotting attributes.
-    legend := false
-    grid   := false
-    link   := :none
-    seriestype := :histogram
-    nbins := nbins
-
-    layout := @layout [tn{0.5w,0.5h} tqn{0.5w,0.5h}
-                       cn{0.5w,0.5h} cqn{0.5w,0.5h}]
-
-    subplot := 1
-    @series begin
-        [t.normalized_rank for t in taskranks]
-    end
-
-    subplot := 3
-    @series begin
-        [t.quartile_normalized_rank
-         for t in taskranks
-         if !ismissing(t.quartile_normalized_rank)
-        ]
-    end
-
-    subplot := 2
-    @series begin
-        [c.normalized_rank for c in coreranks]
-    end
-
-    subplot := 4
-    @series begin
-        [c.quartile_normalized_rank
-         for c in coreranks
-         if !ismissing(c.quartile_normalized_rank)
-        ]
-    end
 end

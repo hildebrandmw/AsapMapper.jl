@@ -191,7 +191,7 @@ function apply_link_weights(t::Taskgraph, options::Dict)
     minimum_link_weight = 2.0 ^ (-ndigits)
 
     # Weight to assign memory links.
-    memory_link_weight = 100.0
+    memory_link_weight = 5.0
 
     # Need to still apply weight in order to get memory modules to work correctly.
     # Just assigns unit weights to each non-memory link and a weight of 5.0
