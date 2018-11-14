@@ -35,6 +35,7 @@ export  place_and_route,
         call,
         # Project Manger interface
         PMConstructor,
+        SimConstructor,
         build_map
 
 # Helper Functions
