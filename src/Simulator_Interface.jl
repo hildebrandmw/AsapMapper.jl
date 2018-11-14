@@ -4,6 +4,8 @@ struct SimConstructor{T}
     options :: NamedTuple
 end
 
+SimConstructor(source) = SimConstructor(source, NamedTuple())
+
 function addoptions(s::SimConstructor, d) 
     options = parse_options(s.options)
     @show options
