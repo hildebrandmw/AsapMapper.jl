@@ -3,8 +3,7 @@ using Documenter, AsapMapper
 makedocs(
     modules = [AsapMapper],
     sitename = "AsapMapper",
-    format = Documenter.HTML(),
-    html_prettyurls = get(ENV, "CI", nothing) == "true",
+    format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true"),
     authors = "Mark Hildebrand, Arthur Hlaing",
     pages = [
         "Home" => "index.md",
@@ -14,8 +13,5 @@ makedocs(
 
 deploydocs(
     repo = "github.com/hildebrandmw/AsapMapper.jl.git",
-    osname = "linux",
     target = "build",
-    deps = nothing,
-    make = nothing,
 )
