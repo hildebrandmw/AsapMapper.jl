@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Tutorial · AsapMapper</title><link href="https://cdnjs.cloudflare.com/ajax/libs/normalize/4.2.0/normalize.min.css" rel="stylesheet" type="text/css"/><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.2.0/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link href="../assets/documenter.css" rel="stylesheet" type="text/css"/></head><body><nav class="toc"><h1>AsapMapper</h1><select id="version-selector" onChange="window.location.href=this.value" style="visibility: hidden"></select><form class="search" id="search-form" action="../search/"><input id="search-query" name="q" type="text" placeholder="Search docs"/></form><ul><li><a class="toctext" href="../">Home</a></li><li class="current"><a class="toctext" href>Tutorial</a><ul class="internal"><li><a class="toctext" href="#Maps,-Placement-and-Routing-from-the-Project-Manager-1">Maps, Placement and Routing from the Project Manager</a></li><li><a class="toctext" href="#Overwriting-Defaults-1">Overwriting Defaults</a></li><li><a class="toctext" href="#Using-the-Simulator-for-Input-1">Using the Simulator for Input</a></li><li><a class="toctext" href="#Changing-Placement-Parameters-1">Changing Placement Parameters</a></li><li><a class="toctext" href="#Keyword-Arguments-1">Keyword Arguments</a></li><li><a class="toctext" href="#Building-Architecturs-1">Building Architecturs</a></li></ul></li></ul></nav><article id="docs"><header><nav><ul><li><a href>Tutorial</a></li></ul><a class="edit-page" href="https://github.com/hildebrandmw/AsapMapper.jl/blob/master/docs/src/tutorial.md"><span class="fa"></span> Edit on GitHub</a></nav><hr/><div id="topbar"><span>Tutorial</span><a class="fa fa-bars" href="#"></a></div></header><h1><a class="nav-anchor" id="Tutorial-1" href="#Tutorial-1">Tutorial</a></h1><h2><a class="nav-anchor" id="Maps,-Placement-and-Routing-from-the-Project-Manager-1" href="#Maps,-Placement-and-Routing-from-the-Project-Manager-1">Maps, Placement and Routing from the Project Manager</a></h2><p>The main interface to AsapMapper is through the Project Manager Interface (<code>PM_Interface/</code>). This takes a JSON file from the Project Manager and builds an architecture and taskgraph from this file. An example of this file is <code>taskgraph/project_manager.json</code>. The following sequence of commands shows how to use this file for a standard mapping.</p><pre><code class="language-julia">julia&gt; using AsapMapper
+
+# Make a PM constructor, containing the path to the JSON file to parse
+julia&gt; constructor = PMConstructor(&quot;taskgraphs/project_manager.json&quot;)
+
+# Build a `Map` object from the constructor. This will automatically choose the architecture
+# to use, and construct the taskgraph from the JSON file
+#
+# The warnings given by AsapMapper are okay to ignore
+julia&gt; M = build_map(constructor);
+
+# Run placement - note the the first time any function is run in Julia, it may take a little
+# while since the function must be compiled. The second time will usually be much snappier.
+julia&gt; place!(M);
+
+# Run routing. The Routing Summary info is a series of checks that runs to make sure that
+# the Architecture and Taskgraph representations did not change in unexpected ways during
+# the mapping process. If one of the checks fails, then the Mapper thinks something is wrong.
+#
+# Usually, a failure occurs when the Mapper cannot find a valid routing and the result is
+# congested.
+julia&gt; route!(M);
+[ Info: Running Pathfinder Routing Algorithm
+┌ Info: Routing Summary
+│ ---------------
+│ Placement Check:    passed
+│ Congestion Check:   passed
+│ Port Check:         passed
+│ Graph Connectivity: passed
+│ Architecture Check: passed
+└ Resource Check:     passed
+
+# Report stats from the mapping. The returned object `histogram` is a dictionary containing
+# the count of links of different lengths.
+#
+# Keys are the length of the link, and values are the number of links of that length
+julia&gt; histogram = AsapMapper.report_routing_stats(M);
+Number of communication channels: 178
+Total global routing links used: 246
+Average Link Length: 1.3820224719101124
+Maximum Link Distance: 5
+Link Histogram:
+DataStructures.SortedDict{Int64,Int64,Base.Order.ForwardOrdering} with 5 entries:
+  1 =&gt; 131
+  2 =&gt; 31
+  3 =&gt; 13
+  4 =&gt; 1
+  5 =&gt; 2
+
+# Plotting
+# Make sure you have `Plots` installed
+julia&gt; ]
+
+pkg&gt; add Plots
+
+# Import plots
+julia&gt; using Plots
+
+# Plot the Map
+julia&gt; plot(M)</code></pre><h2><a class="nav-anchor" id="Overwriting-Defaults-1" href="#Overwriting-Defaults-1">Overwriting Defaults</a></h2><p>When performing architecture exploration, it&#39;s you generally want to use a different  architecture then that specified in the Project Manager file. This can be achieved by adding these parameters to the <code>PMConstructor</code>. A full list of valid parameters can be found by looking at the <code>_get_default_options</code> function in <code>PM_Constructor/Main.jl</code>. The main knob to turn is the architecture. Suppose we wanted to map an application to Asap3 with 4  inter-processer links instead of 2. That would be accomplished as follows:</p><pre><code class="language-julia">julia&gt; using AsapMapper
+
+# We need to define a 0-argument function that will construct our desired architecture
+julia&gt; f() = asap3(Rectangular(4, 1))
+
+# Create a named tuple for option overrides to the PMConstructor.
+julia&gt; overrides = (architecture = f,)
+
+# Pass the overrides to the PMConstructor
+julia&gt; constructor = PMConstructor(&quot;taskgraphs/project_manager.json&quot;, overrides)
+
+# Now when we place, route, and plot - it will be for the asap3 architecture
+julia&gt; M = build_map(constructor); place!(M); route!(M);
+
+julia&gt; using Plots
+
+julia&gt; plot(M)</code></pre><h2><a class="nav-anchor" id="Using-the-Simulator-for-Input-1" href="#Using-the-Simulator-for-Input-1">Using the Simulator for Input</a></h2><p>Sometimes, it is easier to use the <code>profile.json</code> given by the Asap Simulator instead of  using the Project Manager generated files. Using the Simulator output is very similar to the Project Manager, but note that you <strong>must</strong> define the architecture constructor function.</p><pre><code class="language-julia">julia&gt; using AsapMapper
+
+julia&gt; f() = asap4(Rectangular(2,1))
+
+julia&gt; constructor = SimConstructor(&quot;taskgraphs/profile.json&quot;, (architecture = f,))
+
+julia&gt; M = build_map(constructor); place!(M); route!(M)
+
+julia&gt; using Plots; plot(M)</code></pre><h2><a class="nav-anchor" id="Changing-Placement-Parameters-1" href="#Changing-Placement-Parameters-1">Changing Placement Parameters</a></h2><p>Generally, increasing the number of move attempts and initial temperature of the placement will yield a higher qualityh mapping at the cost of extra run time. The documentation for the placement algorithm is shown below:</p><pre><code class="language-none">place!(map::Map; kwargs...) :: SAState</code></pre><p>Run simulated annealing placement directly on <code>map</code>.</p><p>Records the following metrics into <code>map.metadata</code>:</p><ul><li><p><code>placement_struct_time</code> - Amount of time it took to build the    [<code>SAStruct</code>] from <code>map</code>.</p></li><li><p><code>placement_struct_bytes</code> - Number of bytes allocated during the construction   of the [<code>SAStruct</code>]</p></li><li><p><code>placement_time</code> - Running time of placement.</p></li><li><p><code>placement_bytes</code> - Number of bytes allocated during placement.</p></li><li><p><code>placement_objective</code> - Final objective value of placement.</p></li></ul><h2><a class="nav-anchor" id="Keyword-Arguments-1" href="#Keyword-Arguments-1">Keyword Arguments</a></h2><ul><li><p><code>seed</code> - Seed to provide the random number generator. Specify this to a    constant value for consistent results from run to run.</p><p>Default: <code>rand(UInt64)</code></p></li><li><p><code>move_attempts :: Integer</code> - Number of successful moves to generate between   state updates. State updates include adjusting temperature, move distance   limit, state displaying etc.</p><p>Higher numbers will generally yield higher quality placement but with a   longer running time.</p><p>Default: <code>20000</code></p></li><li><p><code>initial_temperature :: Float64</code> - Initial temperature that the system begins   its warming process at. Due to the warming procedure, this should not have   much of an affect on placement.</p><p>Default: <code>1.0</code>.</p></li><li><p><code>supplied_state :: Union{SAState,Nothing}</code> - State type to use for this    placement. Can be used to resume placement where it left off from a previous   run. If <code>nothing</code>, a new <code>SAState</code> object will be initialized.</p><p>Default: <code>nothing</code></p></li><li><p><code>movegen :: MoveGenerator</code> - The [<code>MoveGenerator</code>] to use for this    placement.</p><p>Default: [<code>CachedMoveGenerator</code>]</p></li><li><p><code>warmer</code> - The [<code>SAWarm</code>] warming schedule to use.</p><p>Default: [<code>DefaultSAWarm</code>]</p></li><li><p><code>cooler</code> - The [<code>SACool</code>] cooling schedule to use.</p><p>Default: [<code>DefaultSACool</code>]</p></li><li><p><code>limiter</code> - The [<code>SALimit</code>] move distance limiting algorithm to    use.</p><p>Default: [<code>DefaultSALimit</code>]</p></li><li><p><code>doner</code> - The [<code>SADone</code>] exit condition to use.</p><p>Default: [<code>DefaultSADone</code>]</p></li></ul><p>To increase the number of move attempts (to say, 50000), call the place funtion like the command below:</p><pre><code class="language-julia">julia&gt; using AsapMapper
+
+julia&gt; M = build_map(PMConstructor(&quot;taskgraphs/project_manager.json&quot;));
+julia&gt; place!(M; move_attempts = 50000);</code></pre><h2><a class="nav-anchor" id="Building-Architecturs-1" href="#Building-Architecturs-1">Building Architecturs</a></h2><p>The CAD models in <code>cad_models/</code> directory are the models that are guarenteed to work with  the Mapper framework. When defining custom models, it&#39;s best to use those as a starting  point since many of the inner functions (<code>build_processor_tile</code>, <code>build_memory</code> etc.) attach important metadata to the inner objects that the downstream Mapper2 is expecting.</p><p>In general, though, the Mapper should do a pretty good job in figuring out what should be done with new models. If more functionality is needed, or something is breaking, let me know!</p><footer><hr/><a class="previous" href="../"><span class="direction">Previous</span><span class="title">Home</span></a></footer></article></body></html>
