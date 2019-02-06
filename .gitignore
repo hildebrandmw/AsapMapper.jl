@@ -9,3 +9,5 @@ apps/*
 scratchpad.jl
 *.jdb
 done.txt
+.DS_Store
+docs/build

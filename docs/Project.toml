@@ -1,0 +1,4 @@
+[deps]
+AsapMapper = "db0ab952-c284-11e8-0ada-e14bc0e45012"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+Mapper2 = "d09a7b4e-c278-11e8-3d50-09980a9988f4"

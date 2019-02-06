@@ -129,4 +129,6 @@ function parallel_map_and_save(input_file, output_dir, num_mappings)
     end
 end
 
+report_routing_stats(m::Map) = Mapper2.MapperCore.report_routing_stats(m)
+
 end # module

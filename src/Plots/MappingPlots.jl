@@ -49,16 +49,16 @@ end
 # --------------- #
 # Plotting Recipe #
 # --------------- #
-struct PlotWrapper{T}
-    map::Map
-end
+# struct PlotWrapper
+#     map::Map
+#     plot_route::Bool
+# end
 
-RoutePlot(x) = PlotWrapper{true}(x)
-RatsnestPlot(x) = PlotWrapper{false}(x)
 
-@recipe function f(r::PlotWrapper{T}) where T
+@recipe function f(map::Map; plot_route = true)
     # Unpack map
-    map = r.map
+    #map = r.map
+    #plot_route = r.plot_route
     
 
     # Set up parameters
@@ -67,7 +67,7 @@ RatsnestPlot(x) = PlotWrapper{false}(x)
 
     # Build boxes and routes
     boxes = getboxes(map, spacing, tilesize)
-    routes = T ? getroutes(map, spacing, tilesize) : getlines(map, spacing, tilesize)
+    routes = plot_route ? getroutes(map, spacing, tilesize) : getlines(map, spacing, tilesize)
 
     # Set up plot attributes
     legend := false
