@@ -97,8 +97,6 @@ function _get_default_options()
         :architecture => nothing,
 
         # Default the number of links to 2 to match Asap3/4 architectures.
-        # Invalid if:
-        #   - typeof(architecture) <: FunctionCall
         :num_links => 2,
 
         # Mapping Options
@@ -113,15 +111,7 @@ function _get_default_options()
         # according to the normalized number of writes on that link.
         :use_profiled_links => false,
 
-        # Set to "true" to include frequency as a criteria for mapping.
-        :use_task_suitability => false,
-
-        # Penalty term applied to missing a rank requirement.
-        :task_rank_penalty_start    => 64.0,
-
-        # Set which entry in the "Measurements Dict" is to be used to select
-        # the metric for rank.
-        :task_rank_key              => "Rank",
+        # The rule set to use
         :ruleset => nothing,
 
         # Load Existing Maps
@@ -209,10 +199,13 @@ function parse_verbosity(verbosity)
 end
 
 function getrule(options)
-    if options[:ruleset] == nothing
-        return KC{options[:use_task_suitability]}()
+    ruleset = get(options, :ruleset, nothing)
+    if ruleset == nothing
+        return KC()
+    elseif isa(ruleset, AbstractKC)
+        return ruleset
     else
-        return options[:ruleset]
+        error("Unrecognized ruleset: $(ruleset)")
     end
 end
 
@@ -238,89 +231,28 @@ function build_map(c::PMConstructor)
         Mapper2.MapperCore.load(m, options[:existing_map])
     end
 
-
-    # Print out the important operations for information/debugging purposes.
-    task_rank_key = options[:use_task_suitability] ? options[:task_rank_key] : ""
-
     return m
 end
 
-mutable struct AuxStorage{T}
-    # Value to multiply the ratio of task rank to core rank. Helps emphasize
-    # communication energy versus task suitability.
-    task_penalty_multiplier ::Float64
-
-    # NOTE: Currently unused.
-    # Value to multiply the link costs.
-    link_penalty_multiplier ::Float64
-
-    # Store the task rank to core rank ratios inside a mutable binary maxheap
-    # from DataStructures. When moving a task, reference its entry in the 
-    # handles vector to change its ratio.
-    #
-    # Parameterize this to avoid typing out the whole type-name.
-    ratio_max_heap::T
-end
-
-AuxStorage(x, heap) = AuxStorage(Float64(x), 0.0, heap)
+build_aux(map::Map{D,Asap2}) where D = MutableBinaryMaxHeap(zeros(UInt8, num_edges(map.taskgraph)))
 
 # Placement for Asap2
 function asap_pnr(m::Map{D,Asap2}; kwargs...) where {D}
-    # Build the aux storage for this type.
-    aux = build_aux(m)
-    place!(m, aux = aux; kwargs...)
-    route!(m)
+    for _ in 1:m.options[:num_retries]
+        # Build the aux storage for this type.
+        aux = build_aux(m)
+        place!(m, aux = aux; kwargs...)
+        route!(m)
+        check_routing(m; quiet = true) && break
+    end
     return m
 end
 
-
 function asap_pnr(m::Map{A,D}) where {A,D}
-    if m.options[:use_task_suitability]
-        # Allocate the max_heap to store ratio information and the handles vector.
-        maxheap = DataStructures.mutable_binary_maxheap(Float64)
-
-        # Add metadata pointing to the handle to each node.
-        for task in getnodes(m.taskgraph)
-            # Initialize all ranks to 0.0. These will all be updated correctly
-            # when the nodes first get moved.
-            handle = push!(maxheap, 0.0)
-
-            # Going to store the handles for each entry in the heap in the 
-            # metadata. WHen the "RankedNode" get generated, we will look up
-            # the handle in the metadata and attach it to the node.
-            task.metadata["heap_handle"] = handle
-        end
-
-
-        aux = AuxStorage(m.options[:task_rank_penalty_start], maxheap)
-        while true
-            place!(m, enable_address = true, aux = aux)
-            success = true
-            # Sometimes, routing will fail if memory processors are not located
-            # next to their respective memories. This try-catch block makes sure
-            # the whole routine doesn't break if this happens.
-            try
-                route!(m)
-            catch
-                success = false
-            end
-            if success && check_routing(m; quiet = true)
-                break
-            else
-                aux.task_penalty_multiplier /= 2
-                @info "Routing Failed. Trying aux = $(aux.task_penalty_multiplier)"
-            end
-        end
-    else
-        for i in 1:m.options[:num_retries]
-        #    try
-                place!(m)
-                route!(m)
-                check_routing(m; quiet = true) && break
-        #     catch err
-        #         @error "Received routing error: $err. Trying again."
-        #     end
-        end
+    for _ in 1:m.options[:num_retries]
+        place!(m)
+        route!(m)
+        check_routing(m; quiet = true) && break
     end
 
     return m

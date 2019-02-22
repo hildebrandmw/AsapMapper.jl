@@ -65,6 +65,7 @@ function attach!(a::Vector{T}, m::RegexMatch) where T
     end
 end
 
+# Helpful for dealing with files with an additional .gz extension
 function gzsplitext(s)
     y,z = splitext(s)
     if z == ".gz"
@@ -78,7 +79,7 @@ end
     augment(dir::String, new::String)
 
 Add a numeric suffix to `new` so it does not conflict with anything in directory
-`dir`. Create `dir` if it does nto exist.
+`dir`. Create `dir` if it does not exist.
 """
 function augment(dir::String, new::String)
     dir = isempty(dir) ? "." : dir
@@ -89,12 +90,3 @@ function augment(dir::String, new::String)
 
     return joinpath(dir, newprefix*ext)
 end
-
-################################################################################
-struct FunctionCall
-    f       ::Function
-    args    ::Tuple
-    kwargs  ::Dict{Symbol,Any}
-    FunctionCall(f, args::Tuple = (), kwargs = Dict{Symbol,Any}()) = new(f, args, kwargs)
-end
-call(f::FunctionCall, args...) = (f.f)(args..., f.args...; f.kwargs...)

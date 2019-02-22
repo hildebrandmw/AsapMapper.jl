@@ -1,5 +1,12 @@
-
 # Make sure these build and run without errors
+@testset "Testing Asap4 From Sim Constructor" begin
+    input_file = joinpath(@__DIR__, "..", "taskgraphs", "profile.json")
+    c = AsapMapper.SimConstructor(input_file, (architecture = asap4,))
+    m = AsapMapper.build_map(c)
+    m = AsapMapper.asap_pnr(m)
+    AsapMapper.report_routing_stats(m)
+end
+
 @testset "Testing ASAP 3" begin
     # Build Architecture
     input_file = joinpath(@__DIR__, "mapper_in.json")
@@ -7,7 +14,7 @@
     m = AsapMapper.build_map(c)
     # Placement
     m = AsapMapper.asap_pnr(m)
-    AsapMapper.Mapper2.MapperCore.report_routing_stats(m)
+    AsapMapper.report_routing_stats(m)
 
     AsapMapper.dump_map(m, "mapper_out.json")
     rm("mapper_out.json")
@@ -21,8 +28,9 @@ end
     m = AsapMapper.build_map(c)
     # Placement
     m = AsapMapper.asap_pnr(m)
-    AsapMapper.Mapper2.MapperCore.report_routing_stats(m)
+    AsapMapper.report_routing_stats(m)
 
+    # Test output generation
     AsapMapper.dump_map(m, "mapper_out.json")
     rm("mapper_out.json")
 end
@@ -36,17 +44,18 @@ end
 
     m = AsapMapper.build_map(c)
     m = AsapMapper.asap_pnr(m)
-    AsapMapper.Mapper2.MapperCore.report_routing_stats(m)
+    AsapMapper.report_routing_stats(m)
 end
 
 @testset "Testing Asap3 Hexagonal Profiled" begin
     input_file = joinpath(@__DIR__, "mapper_in.json")
     c = AsapMapper.PMConstructor(
         input_file,
-        (architecture = () -> asap3(Hexagonal(2, 1)), use_profiled_links = true)
+        (architecture = () -> asap3(Hexagonal(2, 1)), 
+         use_profiled_links = true)
     )
 
     m = AsapMapper.build_map(c)
     m = AsapMapper.asap_pnr(m)
-    AsapMapper.Mapper2.MapperCore.report_routing_stats(m)
+    AsapMapper.report_routing_stats(m)
 end

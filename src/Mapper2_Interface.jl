@@ -128,9 +128,17 @@ function Mapper2.SA.build_channels(::AbstractKC, channel, sources, sinks)
     end
 end
 
-######################
-# Extensions for KC2 #
-######################
+########################
+# Extensions for Asap2 #
+########################
+
+# Asap2 has the quirk where longer circuit switched links run slower
+#
+# The idea is to keep a record of all the links in the mapping in a binary maxheap, and
+# attach this maxheap to the auxiliary slot in the SAStruct. We then apply a global penalty
+# on the maximum link length, promoting a lower global link length.
+#
+# I'm not really sure how well this works in practice.
 Base.@propagate_inbounds function SA.unsafe_assign(
             sa :: SAStruct{Asap2}, 
             node :: SA.SANode, 
@@ -156,99 +164,8 @@ Base.@propagate_inbounds function SA.unsafe_assign(
     nothing
 end
 
-build_aux(map::Map{D,Asap2}) where D = 
-    mutable_binary_maxheap(zeros(UInt8, num_edges(map.taskgraph)))
 
 Mapper2.SA.aux_cost(sa_struct::SAStruct{Asap2}) = 512.0 * top(sa_struct.aux)
-
-
-# ------------------------------------------ #
-# Extensions for Frequency Variation Mapping #
-# ------------------------------------------ #
-
-# The main idea with frequency mapping is that each node has a normalized
-# ranking between 0 and 1. The auxiliary objective is to minimize the maximum
-# ratio between node ranking and core ranking across the entire mapping.
-
-# Ranked nodes contain their ranking (listed above) and their handle to the
-# maxheap contained in the "aux" data-struct for this flavor of mapping.
-#
-# The maxheap allows for contant-time checking of the highest ratio between
-# nodes and cores.
-mutable struct RankedNode{T} <: Mapper2.SA.SANode
-    location    ::T
-    class :: Int64
-    outchannels   ::Vector{Int64}
-    inchannels    ::Vector{Int64}
-    # Normalized rank and derivative
-    rank            ::Float64
-    maxheap_handle  ::Int64
-end
-
-
-
-# Must extend the "move" and "swap" functions to update the auxiliary
-# maxheap every time a node is moved for correct handling of the maximum
-# task-to-core ratio.
-function SA.move(sa::SAStruct{KC{true}}, index, spot)
-    node = sa.nodes[index]
-    sa.grid[Mapper2.SA.location(node)] = 0
-    SA.assign(node, spot)
-    sa.grid[Mapper2.SA.location(node)] = index
-
-    # Get the rank for the core at the location of the node and update this
-    # node's handle in the heap.
-    component_rank = sa.address_data[SA.location(node)]
-    ratio = node.rank / component_rank
-
-    update!(sa.aux.ratio_max_heap, node.maxheap_handle, ratio)
-end
-
-function SA.swap(sa::SAStruct{KC{true}}, node1, node2)
-    # Get references to these objects to make life easier.
-    n1 = sa.nodes[node1]
-    n2 = sa.nodes[node2]
-    # Swap address/component assignments
-    s = SA.location(n1)
-    t = SA.location(n2)
-
-    SA.assign(n1, t)
-    SA.assign(n2, s)
-    # Swap grid.
-    sa.grid[t] = node1
-    sa.grid[s] = node2
-
-    # Compute the ratios for both nodes and update their handles in the maxheap.
-    n1_ratio = n1.rank / sa.address_data[SA.location(n1)]
-    n2_ratio = n2.rank / sa.address_data[SA.location(n2)]
-    update!(sa.aux.ratio_max_heap, n1.maxheap_handle, n1_ratio)
-    update!(sa.aux.ratio_max_heap, n2.maxheap_handle, n2_ratio)
-
-    return nothing
-end
-
-# Constructor for RankedNodes.
-function Mapper2.SA.buildnode(::KC{true}, n::TaskgraphNode, x)
-    rank = getrank(n).normalized_rank
-    handle = n.metadata["heap_handle"]
-    # Initialize all nodes to think they are the max ratio. Code for first move
-    # operation will figure out which one is really the maximum.
-    return RankedNode(x, 0, Int64[], Int64[], rank, handle)
-end
-
-# Get the address data for each node.
-function Mapper2.SA.build_address_data(::KC{true}, c::Component)
-    rank = getrank(c).normalized_rank
-    return rank
-end
-
-# Global auxiliary cost for frequency mapping.
-#
-# Take the maximum ratio from the top of the ratio max heap and apply the
-# penalty term to it.
-function Mapper2.SA.aux_cost(::KC{true}, sa::SAStruct)
-    return sa.aux.task_penalty_multiplier * top(sa.aux.ratio_max_heap)
-end
 
 ################################################################################
 # Routing

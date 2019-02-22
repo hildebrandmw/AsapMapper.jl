@@ -1,4 +1,4 @@
-function asap4(style)
+function asap4(style = Rectangular(2,1))
     arch = TopLevel{2}("asap4")
 
     # Extra parameters

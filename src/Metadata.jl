@@ -102,27 +102,6 @@ isoutput(t::TN)     = t.metadata[typekey()] == MTypes.output
 isproc(t::TN)       = t.metadata[typekey()] == MTypes.proc
 ismemoryproc(t::TN) = t.metadata[typekey()] == MTypes.memoryproc
 ismemory(t::TN)     = ismemory(t.metadata[typekey()])
-# low-power high performance stuff
-islowpower(t::TN) = t.metadata[typekey()] == MTypes.lowpower
-ishighperformance(t::TN) = t.metadata[typekey()] == MTypes.highperformance
-
-# Setting task -> core preference.
-mutable struct TaskRank
-    # Ranks
-    rank                    ::Union{Float64,Missing}
-    normalized_rank         ::Float64
-end
-TaskRank(rank) = TaskRank(rank, 0)
-
-mutable struct CoreRank
-    rank                    ::Union{Float64,Missing}
-    normalized_rank         ::Float64
-end
-CoreRank(rank) = CoreRank(rank, 0)
-
-# Make these generic so they work on Components and TaskgraphNodes.
-getrank(t) = get(t.metadata, "rank", missing)
-setrank!(t, val) = t.metadata["rank"] = val
 
 ################################################################################
 # Routing Resources

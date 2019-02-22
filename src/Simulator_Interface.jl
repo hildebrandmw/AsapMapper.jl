@@ -41,6 +41,7 @@ function build_map(sc::SimConstructor)
     rule = getrule(options)
 
     map = Map(rule, toplevel, taskgraph)
+    map.options = options
 
     return map
 end

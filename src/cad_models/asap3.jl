@@ -1,4 +1,4 @@
-function asap3(style)
+function asap3(style = Rectangular(2,1))
     toplevel = TopLevel{2}("asap3")
 
     ####################

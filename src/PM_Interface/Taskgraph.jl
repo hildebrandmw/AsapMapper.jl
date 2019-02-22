@@ -29,7 +29,6 @@ taskgraph_ops(::PMConstructor) = (
     transform_task_types,
     compute_edge_metadata,
     apply_link_weights,
-    experimental_transforms,
 )
 
 function parse_input(t::Taskgraph, tasklist, options)
@@ -255,104 +254,4 @@ function apply_link_weights(t::Taskgraph, options::Dict)
         end
     end
     return t
-end
-
-# Special, experimental transforms to turn on and off.
-function experimental_transforms(t::Taskgraph, options::Dict)
-    use_task_suitability = options[:use_task_suitability]
-    # Get callback for frequency assignment.
-    # Can choose to either use data encoded directly in the taskgraph or to
-    # generate synthetic data.
-    if use_task_suitability
-        read_task_ranks(t, options)
-        normalize_ranks(t, options)
-    end
-
-    return t
-end
-
-function read_task_ranks(t::Taskgraph, options::Dict)
-    rank_key = options[:task_rank_key]
-
-    # Iterate through all nodes. Create an empty "TaskRank" type and attach
-    # it to the metadata for each node.
-    for task in getnodes(t)
-        measurements = task.metadata["measurements_dict"]
-
-        # Get the specified rank from the measurements dictionary
-        # Set them to "missing" if not provided.
-        #
-        # This will be taken care of
-        # when they are normalized in a later processing step.
-        rank = get(measurements, rank_key, missing)
-
-        taskrank = TaskRank(rank)
-        setrank!(task, taskrank)
-    end
-end
-
-################################################################################
-function normalize_ranks(t::Taskgraph, options::Dict)
-    @debug "Normalizing Ranks"
-
-    #absolute_normalize = options[:absolute_rank_normalization]
-    absolute_normalize = true
-
-    # Gather all of the rank types from the tasks.
-    taskranks = [getrank(task) for task in getnodes(t) if !isnonranking(task)]
-
-    # Want to scale the rank portions between 0 and 1, where a higher rank
-    # indicates it is more important.
-    #
-    # Do this by iterating through all ranks to find the maximum rank value. 
-    rank_max::Float64 = typemin(Float64)
-
-    for taskrank in taskranks
-        # unpack raw ranks
-        rank = taskrank.rank
-
-        # Skip missing values to keep rank_min and rank_max floats.
-        if !ismissing(rank)
-            rank_max = max(rank, rank_max)
-        end
-    end
-
-    @debug "Maximum rank: $rank_max"
-
-    num_digits = 6
-    min_val = 2.0 ^ (-num_digits)
-
-    ranks = Float64[]
-
-    # Normalize task ranks between 0 and 1
-    for task in getnodes(t)
-        taskrank = getrank(task)
-        rank = taskrank.rank
-
-        # Deprioritize tasks that don't matter. This includes input handlers
-        # and output handlers.
-        if isnonranking(task)
-            taskrank.normalized_rank = 0.0
-
-        # If a task has not been assigned a rank, assume it is important and 
-        # give it a normalized rank of 1.0
-        elseif ismissing(rank)
-            taskrank.normalized_rank = 1.0
-
-        # Default case: Scale this task's rank using the max rank.
-        # Assign a minimum value to ensure that processor at least has some
-        # rank.
-        else 
-            taskrank.normalized_rank = max(
-                ceil(rank / rank_max, digits = num_digits, base = 2),
-                min_val,
-            )
-        end
-
-        # For debugging.
-        push!(ranks, taskrank.normalized_rank)
-    end
-
-    @debug "$ranks"
-    @debug "$(maximum(ranks))"
 end

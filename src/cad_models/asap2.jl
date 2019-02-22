@@ -1,4 +1,4 @@
-function asap2(style)
+function asap2(style = Rectangular(2,1))
     arch = TopLevel{2}("asap2")
 
     processor = build_processor_tile(style) 

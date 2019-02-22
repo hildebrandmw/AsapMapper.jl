@@ -26,13 +26,11 @@ export  place_and_route,
         # Architecture constructors
         asap4,
         asap3,
+        asap2,
         Rectangular,
         Hexagonal,
         # Architecture types
-        KC,
-        # Misc
-        FunctionCall,
-        call,
+        KC, Asap2,
         # Project Manger interface
         PMConstructor,
         SimConstructor,
@@ -63,17 +61,7 @@ abstract type MapConstructor end
 # - Frequency and Multi are concrete Bool and cannot both be `true`.
 abstract type AbstractKC <: RuleSet end
 
-struct KC{Frequency} <: AbstractKC
-    # Inner constructor to enforce invariants on the type parameters.
-    # Specifically, need to make sure "Frequency" and "Multi" are both
-    # booleans and not both "Bool" at the same time.
-    function KC{F}() where {F}
-        if !isa(F, Bool)
-            error("Please use Boolean type parameters for KC")
-        end
-        return new{F}()
-    end
-end
+struct KC <: AbstractKC end
 struct Asap2 <: AbstractKC end
 
 include("Helper.jl")

@@ -1,7 +1,7 @@
 # Model of "Asap3" for VPR. Only big difference is that memories occupy the
 # whole bottom row, instead of an isthmus of processors.
 
-function asap3_vpr(style)
+function asap3_vpr(style = Rectangular(2,1))
     arch = TopLevel{2}("asap3_vpr")
 
     ####################
