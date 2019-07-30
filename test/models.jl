@@ -16,6 +16,10 @@ end
     m = AsapMapper.asap_pnr(m)
     AsapMapper.report_routing_stats(m)
 
+    # Try plotting
+    plt = plot(m) 
+    @test !isnothing(plt)
+
     AsapMapper.dump_map(m, "mapper_out.json")
     rm("mapper_out.json")
 end

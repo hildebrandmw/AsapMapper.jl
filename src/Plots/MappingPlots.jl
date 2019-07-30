@@ -14,8 +14,6 @@ struct DrawBox
     width       ::Float64
     height      ::Float64
     fill        ::Symbol
-    core_bin    ::Union{Float64,Missing}
-    task_bin    ::Union{Float64,Missing}
 end
 
 # ------- #
@@ -125,22 +123,11 @@ function getboxes(m::Map{2}, spacing, tilesize)
         # fill with cyan if box address is used.
         if MapperCore.isused(m, addr)
             fill = :cyan
-            task = MapperCore.gettask(m, addr)
-
-            task_rank = getrank(task)
-            if ismissing(task_rank)
-                task_bin = missing
-            else
-                task_bin = task_rank.normalized_rank
-            end
         else
             fill = :white
-            task_bin = missing
         end
 
-        #core_bin = round(Mapper2.get_metadata!(child, "rank").normalized_rank, 2)
-        core_bin = 2
-        push!(boxes, DrawBox(x, y, width, height, fill, core_bin, task_bin))
+        push!(boxes, DrawBox(x, y, width, height, fill))
     end
     return boxes
 end
