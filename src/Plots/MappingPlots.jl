@@ -8,12 +8,10 @@ using Mapper2.MapperGraphs
 ################################################################################
 # Post routing plotting.
 ################################################################################
-struct DrawBox
-    x           ::Float64
-    y           ::Float64
-    width       ::Float64
-    height      ::Float64
-    fill        ::Symbol
+struct Polygon
+    x::Vector{Float64}
+    y::Vector{Float64}
+    fill::Symbol
 end
 
 # ------- #
@@ -21,21 +19,8 @@ end
 # ------- #
 
 # Given a box, give X and Y vectors to trace the outline of the box.
-getx(d::DrawBox) = [d.x, d.x + d.width, d.x + d.width, d.x, d.x]
-gety(d::DrawBox) = [d.y, d.y, d.y + d.height, d.y + d.height, d.y]
-
-# Pointers to corners in the box. Useful for printing text in the upper left
-# or lower right.
-lowerleft(d::DrawBox) = (d.x + d.width/4, d.y + d.height/4)
-upperright(d::DrawBox) = (d.x + 3*d.width/4, d.y + 3*d.height/4)
-
-# Methds for getting upper right/lower left triangles for a box. Was
-# experimenting with using color to represent various frequency values and core
-# values. This didn't really work so well.
-utrianglex(d::DrawBox) = [d.x, d.x + d.width, d.x, d.x]
-utriangley(d::DrawBox) = [d.y, d.y, d.y + d.height, d.y]
-ltrianglex(d::DrawBox) = [d.x + d.width, d.x + d.width, d.x, d.x + d.width]
-ltriangley(d::DrawBox) = [d.y + d.height, d.y, d.y + d.height, d.y + d.height]
+getx(d::Polygon) = d.x
+gety(d::Polygon) = d.y
 
 # Encoding for a route through the architecture.
 struct DrawRoute
@@ -43,15 +28,6 @@ struct DrawRoute
     y       ::Vector{Float64}
     color   ::Symbol
 end
-
-# --------------- #
-# Plotting Recipe #
-# --------------- #
-# struct PlotWrapper
-#     map::Map
-#     plot_route::Bool
-# end
-
 
 @recipe function f(map::Map; plot_route = true)
     # Unpack map
@@ -64,8 +40,8 @@ end
     tilesize = 20
 
     # Build boxes and routes
-    boxes = getboxes(map, spacing, tilesize)
-    routes = plot_route ? getroutes(map, spacing, tilesize) : getlines(map, spacing, tilesize)
+    boxes = getboxes(map)
+    routes = plot_route ? getroutes(map) : getlines(map)
 
     # Set up plot attributes
     legend := false
@@ -102,10 +78,12 @@ end
     end
 end
 
-function getboxes(m::Map{2}, spacing, tilesize)
+function getboxes(m::Map{2})
     a = m.toplevel
+    style = a.metadata["style"]
+
     # Create draw boxes for each tile in the array.
-    boxes = DrawBox[]
+    boxes = Polygon[]
     for (name, child) in a.children
         addr = getaddress(a, name)
         # scale x,y
@@ -115,10 +93,9 @@ function getboxes(m::Map{2}, spacing, tilesize)
         else
             addrs = [addr]
         end
-        scale = (spacing + tilesize)
+
         # Unpack tuple after manipulation
-        y,x = dim_min(addrs) .* scale
-        height,width = ((dim_max(addrs) .- dim_min(addrs)) .* scale) .+ tilesize
+        y, x = cartesian(style, dim_min(addrs))
 
         # fill with cyan if box address is used.
         if MapperCore.isused(m, addr)
@@ -126,14 +103,15 @@ function getboxes(m::Map{2}, spacing, tilesize)
         else
             fill = :white
         end
-
-        push!(boxes, DrawBox(x, y, width, height, fill))
+        push!(boxes, Polygon(polygon(style, x, y)..., fill))
     end
     return boxes
 end
 
-function getroutes(m::Map{2}, spacing, tilesize)
+function getroutes(m::Map{2})
     a = m.toplevel
+    style = a.metadata["style"]
+
     routes = DrawRoute[]
     for graph in m.mapping.edges
         x = Float64[]
@@ -143,17 +121,13 @@ function getroutes(m::Map{2}, spacing, tilesize)
             isglobalport(path) || continue
             # Get the address from the path.
             address = getaddress(a, path)
+
             # Create offsets for smooth paths
+            metadata = a[path].metadata
+            y0, x0 = cartesian(style, address)
 
-            # Big offset for macro location in the whole array
-            x_offset_big = address[2]*(spacing + tilesize)
-            y_offset_big = address[1]*(spacing + tilesize)
-            # Small offset for offset within a tile
-            x_offset_small = get(a[path].metadata, "x", 0.5) * tilesize
-            y_offset_small = get(a[path].metadata, "y", 0.5) * tilesize
-
-            push!(x, x_offset_big + x_offset_small)
-            push!(y, y_offset_big + y_offset_small)
+            push!(x, x0 + get(metadata, "x", 0.5))
+            push!(y, y0 + get(metadata, "y", 0.5))
         end
         # Choose color based on length of path
         if length(x) <= 2
@@ -164,12 +138,12 @@ function getroutes(m::Map{2}, spacing, tilesize)
             color = :red
         end
         # Add this route to the routes vector
-        push!(routes, DrawRoute(x,y,color))
+        push!(routes, DrawRoute(x, y, color))
     end
     return routes
 end
 
-function getlines(m::Map{2}, spacing, tilesize)
+function getlines(m::Map{2})
     a = m.toplevel
     lines = DrawRoute[]
     for edge in getedges(m.taskgraph)

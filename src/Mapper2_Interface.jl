@@ -73,6 +73,7 @@ function Mapper2.is_sink_port(::AbstractKC, p::Port, e::TE)
     return port_link_class == edge_link_class
 end
 
+# Don't perform the "preserve_dest" check
 Mapper2.is_sink_port(a::Asap2, p::Port, e::TE) = Mapper2.is_source_port(a,p,e)
 
 function Mapper2.needsrouting(::AbstractKC, edge::TaskgraphEdge)

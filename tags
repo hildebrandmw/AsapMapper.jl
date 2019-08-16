@@ -1,0 +1,251 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+AbstractKC	src/AsapMapper.jl	/^abstract type AbstractKC <: RuleSet end$/;"	f
+AddressCircuit	src/IP_Router/Router.jl	/^struct AddressCircuit$/;"	f
+Asap2	src/AsapMapper.jl	/^struct Asap2 <: AbstractKC end$/;"	f
+AsapMapper	src/AsapMapper.jl	/^module AsapMapper$/;"	f
+Base.getindex	src/Helper.jl	/^function Base.getindex(d::Dict, k::KeyChain)$/;"	f
+Base.in	src/IP_Router/Router.jl	/^function Base.in(addr::Address{D}, box::BoundingBox{D}) where D$/;"	f
+Base.isless	src/Mapper2_Interface.jl	/^Base.isless(a::CostRoutingChannel, b::CostRoutingChannel) = a.cost < b.cost$/;"	f
+Base.parse	src/PM_Interface/Main.jl	/^function Base.parse(c::PMConstructor{<:Dict})$/;"	f
+Base.parse	src/PM_Interface/Main.jl	/^function Base.parse(c::PMConstructor{String})$/;"	f
+Base.setindex!	src/Helper.jl	/^function Base.setindex!(d::Dict, x, k::KeyChain)$/;"	f
+BoundingBox	src/IP_Router/Router.jl	/^function BoundingBox(a::Address{D}, b::Address{D}, growth = 0) where D$/;"	f
+BoundingBox	src/IP_Router/Router.jl	/^function BoundingBox(min::NTuple{D}, max::NTuple{D}) where D$/;"	f
+BoundingBox	src/IP_Router/Router.jl	/^struct BoundingBox{D}$/;"	f
+CostChannel	src/Mapper2_Interface.jl	/^struct CostChannel <: Mapper2.SA.TwoChannel$/;"	f
+CostRoutingChannel	src/Mapper2_Interface.jl	/^struct CostRoutingChannel <: RoutingChannel$/;"	f
+DrawRoute	src/Plots/MappingPlots.jl	/^struct DrawRoute$/;"	f
+Hexagonal	src/cad_models/styles.jl	/^struct Hexagonal <: Style $/;"	f
+JSON.lower	src/PM_Interface/Dump.jl	/^JSON.lower(m::MapDump) = Dict(string(f) => getfield(m,f) for f in fieldnames(typeof(m)))$/;"	f
+KC	src/AsapMapper.jl	/^struct KC <: AbstractKC end$/;"	f
+KeyChain	src/Helper.jl	/^KeyChain(args...) = KeyChain(args)$/;"	f
+KeyChain	src/Helper.jl	/^struct KeyChain{T}$/;"	f
+LightGraphs.add_edge!	src/IP_Router/Router.jl	/^function LightGraphs.add_edge!(n::SimpleNetwork, source::Address, dest::Address)$/;"	f
+LightGraphs.add_vertex!	src/IP_Router/Router.jl	/^function LightGraphs.add_vertex!(n::SimpleNetwork, address::Address{2}, network)$/;"	f
+LightGraphs.edges	src/IP_Router/Router.jl	/^LightGraphs.edges(n::SimpleNetwork) = edges(n.graph)$/;"	f
+LightGraphs.inneighbors	src/IP_Router/Router.jl	/^LightGraphs.inneighbors(n::SimpleNetwork, i) = inneighbors(n.graph, i)$/;"	f
+LightGraphs.ne	src/IP_Router/Router.jl	/^LightGraphs.ne(n::SimpleNetwork) = ne(n.graph)$/;"	f
+LightGraphs.nv	src/IP_Router/Router.jl	/^LightGraphs.nv(n::SimpleNetwork) = nv(n.graph)$/;"	f
+LightGraphs.outneighbors	src/IP_Router/Router.jl	/^LightGraphs.outneighbors(n::SimpleNetwork, i) = outneighbors(n.graph, i)$/;"	f
+MapConstructor	src/AsapMapper.jl	/^abstract type MapConstructor end$/;"	f
+MapDump	src/PM_Interface/Dump.jl	/^abstract type MapDump end$/;"	f
+MapDumpNode	src/PM_Interface/Dump.jl	/^function MapDumpNode(name, address::T, core_name, core_type) where T$/;"	f
+MapDumpNode	src/PM_Interface/Dump.jl	/^struct MapDumpNode <: MapDump$/;"	f
+MapDumpRoute	src/PM_Interface/Dump.jl	/^struct MapDumpRoute <: MapDump$/;"	f
+Mapper2.SA.aux_cost	src/Mapper2_Interface.jl	/^Mapper2.SA.aux_cost(sa_struct::SAStruct{Asap2}) = 512.0 * top(sa_struct.aux)$/;"	f
+Mapper2.SA.build_channels	src/Mapper2_Interface.jl	/^function Mapper2.SA.build_channels(::AbstractKC, channel, sources, sinks)$/;"	f
+Mapper2.addresses	src/IP_Router/Router.jl	/^Mapper2.addresses(b::BoundingBox) = (CartesianIndex(i) for i in Iterators.product(b.bounds...))$/;"	f
+Mapper2.canmap	src/Mapper2_Interface.jl	/^function Mapper2.canmap(::AbstractKC, t::TN, c::Component)$/;"	f
+Mapper2.is_sink_port	src/Mapper2_Interface.jl	/^Mapper2.is_sink_port(a::Asap2, p::Port, e::TE) = Mapper2.is_source_port(a,p,e)$/;"	f
+Mapper2.is_sink_port	src/Mapper2_Interface.jl	/^function Mapper2.is_sink_port(::AbstractKC, p::Port, e::TE)$/;"	f
+Mapper2.is_source_port	src/Mapper2_Interface.jl	/^function Mapper2.is_source_port(::AbstractKC, p::Port, e::TE)$/;"	f
+Mapper2.isequivalent	src/Mapper2_Interface.jl	/^function Mapper2.isequivalent(::AbstractKC, a::TN, b::TN)$/;"	f
+Mapper2.ismappable	src/Mapper2_Interface.jl	/^function Mapper2.ismappable(::AbstractKC, c::Component)$/;"	f
+Mapper2.isspecial	src/Mapper2_Interface.jl	/^function Mapper2.isspecial(::AbstractKC, t::TN)$/;"	f
+Mapper2.needsrouting	src/Mapper2_Interface.jl	/^function Mapper2.needsrouting(::AbstractKC, edge::TaskgraphEdge)$/;"	f
+Mapper2.routing_channel	src/Mapper2_Interface.jl	/^function Mapper2.routing_channel(::AbstractKC, start, stop, edge)$/;"	f
+MemoryLocation	src/experimental_models/asap_cluster.jl	/^function MemoryLocation(a::T, b::T, c::Vector{T}) where T <: NTuple{D,<:Integer} where D$/;"	f
+MemoryLocation	src/experimental_models/asap_cluster.jl	/^function MemoryLocation(a::T, b::Vector{T}, c::Vector{T}) where T <: NTuple{D,<:Integer} where D$/;"	f
+MemoryLocation	src/experimental_models/asap_cluster.jl	/^function MemoryLocation(a::T, c::Vector{T}) where T <: NTuple{D,<:Integer} where D$/;"	f
+MemoryLocation	src/experimental_models/asap_cluster.jl	/^struct MemoryLocation{D}$/;"	f
+PMConstructor	src/PM_Interface/Main.jl	/^    function PMConstructor(file::T, options::NamedTuple = NamedTuple()) where T$/;"	f
+PMConstructor	src/PM_Interface/Main.jl	/^struct PMConstructor{T <: Union{String,Dict}} <: MapConstructor$/;"	f
+Polygon	src/Plots/MappingPlots.jl	/^struct Polygon$/;"	f
+Rectangular	src/cad_models/styles.jl	/^struct Rectangular <: Style $/;"	f
+RoutingTuple	src/PM_Interface/Dump.jl	/^struct RoutingTuple$/;"	f
+SimConstructor	src/Simulator_Interface.jl	/^SimConstructor(source) = SimConstructor(source, NamedTuple())$/;"	f
+SimConstructor	src/Simulator_Interface.jl	/^struct SimConstructor{T}$/;"	f
+SimpleNetwork	src/IP_Router/Router.jl	/^SimpleNetwork() = SimpleNetwork($/;"	f
+SimpleNetwork	src/IP_Router/Router.jl	/^struct SimpleNetwork$/;"	f
+Style	src/cad_models/styles.jl	/^abstract type Style end$/;"	f
+_get_default_options	src/PM_Interface/Main.jl	/^function _get_default_options()$/;"	f
+add_highperformance	src/Metadata.jl	/^add_highperformance(c::Component) = push!(c.metadata[typekey()], MTypes.highperformance)$/;"	f
+add_lowpower	src/Metadata.jl	/^add_lowpower(c::Component) = push!(c.metadata[typekey()], MTypes.lowpower)$/;"	f
+add_route!	src/PM_Interface/Dump.jl	/^function add_route!(n::MapDumpNode, $/;"	f
+addoptions	src/Simulator_Interface.jl	/^function addoptions(s::SimConstructor, d) $/;"	f
+address	src/IP_Router/Router.jl	/^address(a::AddressCircuit) = a.address$/;"	f
+append_suffix	src/Helper.jl	/^function append_suffix(iter, key::String)$/;"	f
+apply_link_weights	src/PM_Interface/Taskgraph.jl	/^function apply_link_weights(t::Taskgraph, options::Dict)$/;"	f
+asap2	src/cad_models/asap2.jl	/^function asap2(style = Rectangular(2,1))$/;"	f
+asap3	src/cad_models/asap3.jl	/^function asap3(style = Rectangular(2,1))$/;"	f
+asap3_vpr	src/cad_models/asap3_vpr.jl	/^function asap3_vpr(style = Rectangular(2,1))$/;"	f
+asap4	src/cad_models/asap4.jl	/^function asap4(style = Rectangular(2,1))$/;"	f
+asap_cluster	src/experimental_models/asap_cluster.jl	/^function asap_cluster(num_links, A)$/;"	f
+asap_colmem	src/experimental_models/asap_colmem.jl	/^function asap_colmem(num_links, A, dim::Tuple{Int64,Int64}, mem_cols, vert_spacing)$/;"	f
+asap_ldcs	src/experimental_models/asap_ldcs.jl	/^function asap_ldcs(num_links, A)$/;"	f
+asap_plus	src/experimental_models/asap_plus.jl	/^function asap_plus(num_links, A)$/;"	f
+asap_pnr	src/PM_Interface/Main.jl	/^function asap_pnr(m::Map{A,D}) where {A,D}$/;"	f
+asap_pnr	src/PM_Interface/Main.jl	/^function asap_pnr(m::Map{D,Asap2}; kwargs...) where {D}$/;"	f
+attach!	src/Helper.jl	/^attach!(a, m) = nothing$/;"	f
+attach!	src/Helper.jl	/^function attach!(a::Vector{T}, m::RegexMatch) where T$/;"	f
+augment	src/Helper.jl	/^function augment(dir::String, new::String)$/;"	f
+basic_place	src/PNR.jl	/^function basic_place(arch::TopLevel, taskgraph::Taskgraph)$/;"	f
+basic_route	src/PNR.jl	/^function basic_route(arch::TopLevel, taskgraph::Taskgraph)$/;"	f
+boxx	src/cad_models/styles.jl	/^boxx(x, width) = [x, x + width, x + width, x, x]$/;"	f
+boxy	src/cad_models/styles.jl	/^boxy(y, height) = [y, y, y + height, y + height, y]$/;"	f
+build_arch	src/cad_models/build_arch.jl	/^function build_arch(name::String,A)$/;"	f
+build_architecture	src/PM_Interface/Architecture.jl	/^function build_architecture(c::PMConstructor, json_dict)$/;"	f
+build_architecture	src/Simulator_Interface.jl	/^build_architecture(s::SimConstructor, json_dict) = json_dict["mapper_options"][:architecture]()$/;"	f
+build_input_handler	src/cad_models/components.jl	/^build_input_handler(style::Style) = build_input_handler(iolinks(style))$/;"	f
+build_input_handler	src/cad_models/components.jl	/^function build_input_handler(num_links::Integer)$/;"	f
+build_ip_model	src/IP_Router/Router.jl	/^function build_ip_model(m::Map{2})$/;"	f
+build_ldcs_processor_tile	src/experimental_models/asap_ldcs.jl	/^function build_ldcs_processor_tile(num_links,$/;"	f
+build_map	src/PM_Interface/Main.jl	/^function build_map(c::PMConstructor)$/;"	f
+build_map	src/Simulator_Interface.jl	/^function build_map(sc::SimConstructor)$/;"	f
+build_memory	src/cad_models/components.jl	/^function build_memory(nports = 2)$/;"	f
+build_memory_processor_tile_generic	src/experimental_models/generic.jl	/^function build_memory_processor_tile_generic(dimension::Int64,$/;"	f
+build_model	src/cad_models/build_model.jl	/^function build_model(name::String, A)$/;"	f
+build_network	src/IP_Router/Router.jl	/^function build_network(m::Map{2})$/;"	f
+build_output_handler	src/cad_models/components.jl	/^build_output_handler(style::Style) = build_output_handler(iolinks(style))$/;"	f
+build_output_handler	src/cad_models/components.jl	/^function build_output_handler(num_links::Integer)$/;"	f
+build_processor	src/cad_models/components.jl	/^function build_processor($/;"	f
+build_processor_generic	src/experimental_models/generic.jl	/^function build_processor_generic(dimension::Int64,$/;"	f
+build_processor_tile	src/cad_models/components.jl	/^function build_processor_tile($/;"	f
+build_processor_tile_generic	src/experimental_models/generic.jl	/^function build_processor_tile_generic(dimension::Int64,$/;"	f
+build_taskgraph	src/PM_Interface/Taskgraph.jl	/^build_taskgraph(c::MapConstructor) = build_taskgraph(c, parse(c))$/;"	f
+build_taskgraph	src/PM_Interface/Taskgraph.jl	/^function build_taskgraph(c::MapConstructor, json_dict::Dict)$/;"	f
+build_taskgraph	src/Simulator_Interface.jl	/^function build_taskgraph(sc::SimConstructor, json_dict::AbstractDict)$/;"	f
+cartesian	src/cad_models/styles.jl	/^cartesian(::Rectangular, x, y) = (1.5*x, 1.5*y)$/;"	f
+cartesian	src/cad_models/styles.jl	/^cartesian(s::Style, x::Address) = cartesian(s, Tuple(x))$/;"	f
+cartesian	src/cad_models/styles.jl	/^cartesian(s::Style, x::Tuple) = cartesian(s, x...)$/;"	f
+cartesian	src/cad_models/styles.jl	/^function cartesian(::Hexagonal, x, y) $/;"	f
+compute_edge_metadata	src/PM_Interface/Taskgraph.jl	/^function compute_edge_metadata(t::Taskgraph, options::Dict)$/;"	f
+connect_asap_ldcs_processors	src/experimental_models/asap_ldcs.jl	/^function connect_asap_ldcs_processors(tl, num_links)$/;"	f
+connect_io	src/cad_models/components.jl	/^function connect_io(toplevel, style)$/;"	f
+connect_io_asap2	src/cad_models/asap2.jl	/^function connect_io_asap2(arch)$/;"	f
+connect_memories	src/cad_models/components.jl	/^function connect_memories(toplevel, style)$/;"	f
+connect_memories_cluster	src/experimental_models/asap_cluster.jl	/^function connect_memories_cluster(arch, memories)$/;"	f
+connect_memories_colmem	src/experimental_models/asap_colmem.jl	/^function connect_memories_colmem(arch, memories)$/;"	f
+connect_memories_generic	src/experimental_models/generic.jl	/^function connect_memories_generic(tl)$/;"	f
+connect_memories_plus	src/experimental_models/asap_plus.jl	/^function connect_memories_plus(tl)$/;"	f
+connect_processors	src/cad_models/components.jl	/^function connect_processors(toplevel, style)$/;"	f
+connect_processors_colmem	src/experimental_models/asap_colmem.jl	/^function connect_processors_colmem(tl, num_links)$/;"	f
+connect_processors_generic	src/experimental_models/generic.jl	/^function connect_processors_generic(tl,dimension)$/;"	f
+create_dict	src/PM_Interface/Dump.jl	/^create_dict(d::Dict, k, v) = haskey(d, k) || (d[k] = v())$/;"	f
+directions	src/cad_models/styles.jl	/^directions(::Hexagonal) = ("30", "90", "150", "210", "270", "330")$/;"	f
+directions	src/cad_models/styles.jl	/^directions(::Rectangular) = ("east", "north", "south", "west")$/;"	f
+dump_map	src/PM_Interface/Dump.jl	/^function dump_map(m::Map, filename::AbstractString)$/;"	f
+extract_routings	src/PM_Interface/Dump.jl	/^function extract_routings(m::Map)$/;"	f
+filter_io	src/cad_models/styles.jl	/^filter_io(x) = search_metadata!($/;"	f
+filter_memory	src/cad_models/styles.jl	/^filter_memory(n) = x -> search_metadata!(x, typekey(), MTypes.memory(n), in)$/;"	f
+filter_memproc	src/cad_models/styles.jl	/^filter_memproc(x) = search_metadata!(x, typekey(), MTypes.memoryproc, in)$/;"	f
+filter_proc	src/cad_models/styles.jl	/^filter_proc(x) = search_metadata!(x, typekey(), MTypes.proc, in)$/;"	f
+generic	src/experimental_models/generic.jl	/^function generic(row::Int64, $/;"	f
+getboxes	src/Plots/MappingPlots.jl	/^function getboxes(m::Map{2})$/;"	f
+getdata	src/IP_Router/Router.jl	/^getdata(n::SimpleNetwork, i::Int) = n.vertex_data[i]$/;"	f
+getkeys	src/Helper.jl	/^function getkeys(d::T, keys) where T <: Dict$/;"	f
+getlines	src/Plots/MappingPlots.jl	/^function getlines(m::Map{2})$/;"	f
+getnetwork	src/IP_Router/Router.jl	/^getnetwork(a::AddressCircuit) = a.network$/;"	f
+getroutes	src/Plots/MappingPlots.jl	/^function getroutes(m::Map{2})$/;"	f
+getrule	src/PM_Interface/Main.jl	/^function getrule(options)$/;"	f
+getvertices	src/IP_Router/Router.jl	/^function getvertices(n::SimpleNetwork, a::Address{2}, networks)$/;"	f
+getvertices	src/IP_Router/Router.jl	/^getvertices(n::SimpleNetwork, a::Address{2}) = get(n.address_to_vertex, a, Int[])$/;"	f
+getx	src/Plots/MappingPlots.jl	/^getx(d::Polygon) = d.x$/;"	f
+gety	src/Plots/MappingPlots.jl	/^gety(d::Polygon) = d.y$/;"	f
+gzsplitext	src/Helper.jl	/^function gzsplitext(s)$/;"	f
+hexx	src/cad_models/styles.jl	/^hexx(x) = [x+1, x + 1\/2, x - 1\/2, x - 1, x - 1\/2, x + 1\/2, x+1]$/;"	f
+hexy	src/cad_models/styles.jl	/^hexy(y) = [y, y + sq(), y + sq(), y, y - sq(), y - sq(), y]$/;"	f
+initial_offset	src/cad_models/styles.jl	/^function initial_offset(::Hexagonal, orientation, direction)$/;"	f
+initial_offset	src/cad_models/styles.jl	/^function initial_offset(::Rectangular, orientation, direction)$/;"	f
+initialize_dict	src/experimental_models/generic.jl	/^function initialize_dict(r,c,n)$/;"	f
+input_handler_metadata	src/Metadata.jl	/^input_handler_metadata() = Dict{String,Any}(typekey() => [MTypes.input])$/;"	f
+input_handler_port_metadata	src/Metadata.jl	/^function input_handler_port_metadata(nlinks)$/;"	f
+interpolate	src/Metadata.jl	/^interpolate(x0, y0, x1, y1, t) = (x0, y0) .+ (t .* (x1 - x0, y1 - y0))$/;"	f
+interpolate	src/Metadata.jl	/^interpolate(x::Tuple, y::Tuple, t) = interpolate(x..., y..., t)$/;"	f
+iolinks	src/cad_models/styles.jl	/^iolinks(x::Style) = x.io_links$/;"	f
+iorules	src/cad_models/styles.jl	/^function iorules(style::Hexagonal)$/;"	f
+iorules	src/cad_models/styles.jl	/^function iorules(style::Rectangular)$/;"	f
+iproute	src/IP_Router/Router.jl	/^function iproute(m::Map{A,2}) where {A}$/;"	f
+ishighperformance	src/Metadata.jl	/^ishighperformance(c::AbstractComponent) = ismappable(c) && in(MTypes.highperformance, c.metadata[typekey()])$/;"	f
+isinput	src/Metadata.jl	/^isinput(c::AbstractComponent)       = ismappable(c) && in(MTypes.input, c.metadata[typekey()])$/;"	f
+isinput	src/Metadata.jl	/^isinput(t::TN)      = t.metadata[typekey()] == MTypes.input$/;"	f
+islowpower	src/Metadata.jl	/^islowpower(c::AbstractComponent)     = ismappable(c) && in(MTypes.lowpower, c.metadata[typekey()])$/;"	f
+ismappable	src/Metadata.jl	/^ismappable(c::AbstractComponent)    = haskey(c.metadata, typekey())$/;"	f
+ismappable	src/Metadata.jl	/^ismappable(t::TN)   = true$/;"	f
+ismatch	src/PM_Interface/Architecture.jl	/^function ismatch(c::Component, pm_base_type)$/;"	f
+ismemory	src/Metadata.jl	/^function ismemory(c::AbstractComponent)$/;"	f
+ismemory	src/Metadata.jl	/^ismemory(s::String) = startswith(s, "memory") && endswith(s, "port")$/;"	f
+ismemory	src/Metadata.jl	/^ismemory(t::TN)     = ismemory(t.metadata[typekey()])$/;"	f
+ismemory	src/Metadata.jl	/^ismemory(x) = false$/;"	f
+ismemoryproc	src/Metadata.jl	/^ismemoryproc(c::AbstractComponent)  = ismappable(c) && in(MTypes.memoryproc, c.metadata[typekey()])$/;"	f
+ismemoryproc	src/Metadata.jl	/^ismemoryproc(t::TN) = t.metadata[typekey()] == MTypes.memoryproc$/;"	f
+isnonranking	src/PM_Interface/Main.jl	/^isnonranking(t) = isinput(t) || isoutput(t)$/;"	f
+isoutput	src/Metadata.jl	/^isoutput(c::AbstractComponent)      = ismappable(c) && in(MTypes.output, c.metadata[typekey()])$/;"	f
+isoutput	src/Metadata.jl	/^isoutput(t::TN)     = t.metadata[typekey()] == MTypes.output$/;"	f
+isproc	src/Metadata.jl	/^isproc(c::AbstractComponent)        = ismappable(c) && in(MTypes.proc, c.metadata[typekey()])$/;"	f
+isproc	src/Metadata.jl	/^isproc(t::TN)       = t.metadata[typekey()] == MTypes.proc$/;"	f
+links	src/cad_models/styles.jl	/^links(x::Style) = x.links$/;"	f
+low_temp_placement	src/PNR.jl	/^function low_temp_placement(arch            ::TopLevel,$/;"	f
+low_temp_route	src/PNR.jl	/^function low_temp_route(arch, taskgraph;$/;"	f
+lowtemp_pnr	src/PNR.jl	/^function lowtemp_pnr(m::Map, iterations; place_kwargs...)$/;"	f
+make_input!	src/Metadata.jl	/^make_input!(t::TN)       = (t.metadata[typekey()] = MTypes.input)$/;"	f
+make_memory!	src/Metadata.jl	/^make_memory!(t::TN, ports::Integer) = t.metadata[typekey()] = MTypes.memory(ports)$/;"	f
+make_memoryproc!	src/Metadata.jl	/^make_memoryproc!(t::TN)  = (t.metadata[typekey()] = MTypes.memoryproc)$/;"	f
+make_offset_list	src/PM_Interface/Dump.jl	/^function make_offset_list(arch, g)$/;"	f
+make_output!	src/Metadata.jl	/^make_output!(t::TN)      = (t.metadata[typekey()] = MTypes.output)$/;"	f
+make_proc!	src/Metadata.jl	/^make_proc!(t::TN)        = (t.metadata[typekey()] = MTypes.proc)$/;"	f
+mem_addresses	src/experimental_models/asap_cluster.jl	/^function mem_addresses(v::Vector{MemoryLocation{D}}) where D$/;"	f
+mem_layout	src/experimental_models/generic.jl	/^function mem_layout(row,col,count)$/;"	f
+mem_memory_request_metadata	src/Metadata.jl	/^function mem_memory_request_metadata(nports)$/;"	f
+mem_memory_return_metadata	src/Metadata.jl	/^function mem_memory_return_metadata(nports)$/;"	f
+mem_neighbor	src/experimental_models/asap_cluster.jl	/^function mem_neighbor(v::Vector{MemoryLocation{D}}) where D$/;"	f
+mem_neighbors	src/experimental_models/asap_cluster.jl	/^function mem_neighbors(v::Vector{MemoryLocation{D}}) where D$/;"	f
+mem_nport_metadata	src/Metadata.jl	/^function mem_nport_metadata(nports::Int)$/;"	f
+mem_proc_metadata	src/Metadata.jl	/^mem_proc_metadata() = Dict{String,Any}(typekey() => [MTypes.proc, MTypes.memoryproc])$/;"	f
+memory_meta	src/Metadata.jl	/^memory_meta(ports::Int) = "memory_$(ports)port"$/;"	f
+memory_request_rules	src/cad_models/styles.jl	/^function memory_request_rules(::Hexagonal)$/;"	f
+memory_request_rules	src/cad_models/styles.jl	/^function memory_request_rules(::Rectangular)$/;"	f
+memory_return_rules	src/cad_models/styles.jl	/^function memory_return_rules(::Hexagonal)$/;"	f
+memory_return_rules	src/cad_models/styles.jl	/^function memory_return_rules(::Rectangular)$/;"	f
+multisample_routing	src/PNR.jl	/^function multisample_routing(arch, taskgraph, iteration_number, nsamples)$/;"	f
+name_mappables	src/PM_Interface/Architecture.jl	/^function name_mappables(toplevel::TopLevel, json_dict)$/;"	f
+number_regex	src/Helper.jl	/^number_regex(str) = Regex("(?<=$(str)_)\\\\d+")$/;"	f
+oneofin	src/AsapMapper.jl	/^function oneofin(a,b)$/;"	f
+other_address	src/cad_models/build_arch.jl	/^function other_address(addr, offset, count)$/;"	f
+output_handler_metadata	src/Metadata.jl	/^output_handler_metadata() = Dict{String,Any}(typekey() => [MTypes.output])$/;"	f
+output_handler_port_metadata	src/Metadata.jl	/^function output_handler_port_metadata(nlinks)$/;"	f
+p	src/PNR.jl	/^    p(x) = low_temp_placement(arch, taskgraph, x;$/;"	f
+parallel_map_and_save	src/AsapMapper.jl	/^function parallel_map_and_save(input_file, output_dir, num_mappings)$/;"	f
+parse	src/Simulator_Interface.jl	/^function parse(s::SimConstructor{String})$/;"	f
+parse	src/Simulator_Interface.jl	/^function parse(s::SimConstructor{T}) where T $/;"	f
+parse_input	src/PM_Interface/Taskgraph.jl	/^function parse_input(t::Taskgraph, tasklist, options)$/;"	f
+parse_input!	src/Simulator_Interface.jl	/^function parse_input!(::SimConstructor, taskgraph, json_dict::AbstractDict)$/;"	f
+parse_options	src/PM_Interface/Main.jl	/^function parse_options(internal::NamedTuple, external::Dict = Dict{Symbol,Any}())$/;"	f
+parse_verbosity	src/PM_Interface/Main.jl	/^function parse_verbosity(verbosity)$/;"	f
+place_and_route	src/AsapMapper.jl	/^function place_and_route(profile_path, dump_path)$/;"	f
+polygon	src/cad_models/styles.jl	/^polygon(::Hexagonal, x, y) = (hexx(x), hexy(y))$/;"	f
+polygon	src/cad_models/styles.jl	/^polygon(::Rectangular, x, y) = (boxx(x, 1), boxy(y, 1))$/;"	f
+populate_routes!	src/PM_Interface/Dump.jl	/^function populate_routes!(jsn,m)$/;"	f
+port_boundaries	src/cad_models/styles.jl	/^function port_boundaries(::Hexagonal, orientation) $/;"	f
+port_boundaries	src/cad_models/styles.jl	/^function port_boundaries(::Rectangular, orientation) $/;"	f
+proc_fifo_metadata	src/Metadata.jl	/^function proc_fifo_metadata(nfifos)$/;"	f
+proc_memory_request_metadata	src/Metadata.jl	/^function proc_memory_request_metadata()$/;"	f
+proc_memory_return_metadata	src/Metadata.jl	/^function proc_memory_return_metadata()$/;"	f
+proc_metadata	src/Metadata.jl	/^proc_metadata() = Dict{String,Any}(typekey() => [MTypes.proc])$/;"	f
+proc_output_metadata	src/Metadata.jl	/^function proc_output_metadata(ndirs, nlayers)$/;"	f
+procrules	src/cad_models/styles.jl	/^function procrules(style::Hexagonal)$/;"	f
+procrules	src/cad_models/styles.jl	/^function procrules(style::Rectangular) $/;"	f
+r	src/PNR.jl	/^    r(x) = multisample_routing(arch, taskgraph, x, nsamples)$/;"	f
+record_info!	src/PM_Interface/Dump.jl	/^function record_info!(json_dict, m::Map)$/;"	f
+report_routing_stats	src/AsapMapper.jl	/^report_routing_stats(m::Map) = Mapper2.MapperCore.report_routing_stats(m)$/;"	f
+routing_metadata	src/Metadata.jl	/^function routing_metadata(link_class)$/;"	f
+set_logging	src/AsapMapper.jl	/^set_logging(level) = nothing$/;"	f
+shotgun_placement	src/PNR.jl	/^function shotgun_placement(arch     ::TopLevel,$/;"	f
+skeleton_dump	src/PM_Interface/Dump.jl	/^function skeleton_dump(m::Map)$/;"	f
+sq	src/cad_models/styles.jl	/^sq() = sqrt(3) \/ 2$/;"	f
+squash	src/cad_models/components.jl	/^squash(x) = reshape(x, :)$/;"	f
+stringtoindex2	src/cad_models/build_model.jl	/^function stringtoindex2(string)$/;"	f
+stringtoindex3	src/cad_models/build_model.jl	/^function stringtoindex3(string)$/;"	f
+stringtotuple	src/cad_models/build_arch.jl	/^function stringtotuple(string)$/;"	f
+stripped_contents	src/Helper.jl	/^stripped_contents(dir::String) = [first(gzsplitext(i)) for i in readdir(dir)]$/;"	f
+taskgraph_ops	src/PM_Interface/Taskgraph.jl	/^taskgraph_ops(::PMConstructor) = ($/;"	f
+top_level_port_metadata	src/Metadata.jl	/^function top_level_port_metadata(style, orientation, direction, class, num_links)$/;"	f
+transform_task_types	src/PM_Interface/Taskgraph.jl	/^function transform_task_types(t::Taskgraph, options::Dict)$/;"	f
+type_sanitize	src/Helper.jl	/^function type_sanitize(::Type{T}, v::U) where {T,U}$/;"	f
+typekey	src/Metadata.jl	/^        typekey() => attrs,$/;"	f
+typekey	src/Metadata.jl	/^typekey() = "mapper_type"$/;"	f

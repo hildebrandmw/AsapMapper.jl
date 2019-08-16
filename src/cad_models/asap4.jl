@@ -1,5 +1,6 @@
 function asap4(style = Rectangular(2,1))
     arch = TopLevel{2}("asap4")
+    arch.metadata["style"] = style
 
     # Extra parameters
     num_fifos = 2

@@ -1,5 +1,6 @@
 function asap2(style = Rectangular(2,1))
     arch = TopLevel{2}("asap2")
+    arch.metadata["style"] = style
 
     processor = build_processor_tile(style) 
     for r in 0:11, c in 0:12

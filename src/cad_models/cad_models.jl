@@ -1,6 +1,7 @@
 # Detailed models for performing mapping to Asap3/Asap4
 
 # Constructors for basic components of the array
+include("styles.jl")
 include("components.jl")
 
 # Array layouts

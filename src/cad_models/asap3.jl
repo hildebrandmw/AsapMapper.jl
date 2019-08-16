@@ -1,5 +1,6 @@
 function asap3(style = Rectangular(2,1))
     toplevel = TopLevel{2}("asap3")
+    toplevel.metadata["style"] = style
 
     ####################
     # Normal Processor #
