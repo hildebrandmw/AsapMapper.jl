@@ -69,7 +69,7 @@ function procrules(style::Rect5)
     )
     mod1_offsets = squash([
         Offset(a, "$b[$i]", "$c[$i]") 
-        for (a,b,c) in odd_skeleton, i in 0:style.links-1
+        for (a,b,c) in mod1_skeleton, i in 0:style.links-1
     ])
     mod1_rule = ConnectionRule(
         mod1_offsets, 
@@ -88,7 +88,7 @@ function procrules(style::Rect5)
     )
     mod2_offsets = squash([
         Offset(a, "$b[$i]", "$c[$i]") 
-        for (a,b,c) in mod0_skeleton, i in 0:style.links-1
+        for (a,b,c) in mod2_skeleton, i in 0:style.links-1
     ])
     mod2_rule = ConnectionRule(
         mod2_offsets, 
@@ -107,7 +107,7 @@ function procrules(style::Rect5)
     )
     mod3_offsets = squash([
         Offset(a, "$b[$i]", "$c[$i]") 
-        for (a,b,c) in odd_skeleton, i in 0:style.links-1
+        for (a,b,c) in mod3_skeleton, i in 0:style.links-1
     ])
     mod3_rule = ConnectionRule(
         mod3_offsets, 
@@ -123,15 +123,15 @@ function port_boundaries(::Rect5, orientation)
     coords = Dict(
         "east" => ((1,0), (1,1)),
 
-        "south_left"    => ((1, 1), (0.67, 1)),
-        "south"         => ((0.67 ,1), (0.33,1)),
-        "south_right"   => ((0.33 ,1), (0,1)),
+        "north_right"    => ((1, 1), (0.67, 1)),
+        "north"         => ((0.67 ,1), (0.33,1)),
+        "north_left"   => ((0.33 ,1), (0,1)),
 
         "west"          => ((0,0), (0,1)),
 
-        "north_left"    => ((1, 0), (0.67, 0)),
-        "north"         => ((0.67,0), (0.33,0)),
-        "north_right"   => ((0.33,0), (0, 0))
+        "south_right"    => ((1, 0), (0.67, 0)),
+        "south"         => ((0.67,0), (0.33,0)),
+        "south_left"   => ((0.33,0), (0, 0))
     )
 
     return coords[orientation]
@@ -150,11 +150,23 @@ function initial_offset(::Rect5, orientation, direction)
         ( "south_right", Input ) => 0.55,
         ( "west" , Input ) => 0.55,
 
+        ( "north_left", Input ) => 0.55,
         ( "north", Input ) => 0.05,
+        ( "north_right", Input ) => 0.55,
         ( "east" , Input ) => 0.05,
+        ( "south_left", Output ) => 0.55,
         ( "south", Output ) => 0.05,
+        ( "south_right", Output ) => 0.55,
         ( "west" , Output ) => 0.05,
     )
 
     return starts[(orientation, direction)]
+end
+
+# Extend `cartesian` to get the shifting of boxes correct
+function cartesian(::Rect5, x, y)
+    if mod(x, 4) == 1 || mod(x, 4) == 2
+        return (1.5 * x, 1.5 * y + 0.75)
+    end
+    return (1.5*x, 1.5 * y)
 end
