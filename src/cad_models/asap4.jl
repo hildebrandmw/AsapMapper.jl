@@ -1,4 +1,4 @@
-function asap4(style = Rectangular(2,1))
+function asap4(style = Rectangular(2,1); blacklist = ())
     arch = TopLevel{2}("asap4")
     arch.metadata["style"] = style
 
@@ -10,9 +10,11 @@ function asap4(style = Rectangular(2,1))
     ####################
     processor = build_processor_tile(style)
     for r in 0:23, c in 0:26
+        in((r,c), blacklist) && continue
         add_child(arch, processor, CartesianIndex(r,c))
     end
     for r in 0:19, c in 27
+        in((r,c), blacklist) && continue
         add_child(arch, processor, CartesianIndex(r,c))
     end
 
