@@ -128,7 +128,7 @@ function iorules(style::Hexagonal)
 end
 
 function memory_return_rules(::Hexagonal)
-    return ConnectionRule(
+    mem2_to_proc = ConnectionRule(
         [
             Offset((-1, 0), "out[0]", "memory_in"), 
             Offset((-1, 1), "out[1]", "memory_in")
@@ -136,10 +136,18 @@ function memory_return_rules(::Hexagonal)
         source_filter = filter_memory(2),
         dest_filter = filter_memproc
     )
+
+    mem1_to_proc = ConnectionRule(
+        [Offset((-1,0), "out[0]", "memory_in")],
+        source_filter = filter_memory(1),
+        dest_filter = filter_memory(1),
+    )
+
+    return (mem2_to_proc, mem1_to_proc)
 end
 
 function memory_request_rules(::Hexagonal)
-    return ConnectionRule(
+    proc_to_mem2 = ConnectionRule(
         [
             Offset(( 1, 0), "memory_out", "in[0]"), 
             Offset(( 1,-1), "memory_out", "in[1]")
@@ -147,6 +155,14 @@ function memory_request_rules(::Hexagonal)
         source_filter = filter_memproc,
         dest_filter = filter_memory(2)
     )
+
+    proc_to_mem1 = ConnectionRule(
+        [Offset(( 1, 0), "memory_out", "in[0]"), ],
+        source_filter = filter_memproc,
+        dest_filter = filter_memory(1)
+    )
+
+    return (proc_to_mem2, proc_to_mem1)
 end
 
 # Port orientations

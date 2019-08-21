@@ -15,17 +15,6 @@ const _mapper_task_classes = Set([
       "memory_2port",
     ])
 
-# Special attributes are task attributes that are considere "sparse" in the
-# architecture and should be moved direct look-up tables rather than
-# near-address search
-const _special_attributes = Set([
-      "memory_processor",
-      "input_handler",
-      "output_handler",
-      "memory_1port",
-      "memory_2port",
-    ])
-
 # Function to unify mapper types cleanly between tasks and cores.
 memory_meta(ports::Int) = "memory_$(ports)port"
 ismemory(s::String) = startswith(s, "memory") && endswith(s, "port")

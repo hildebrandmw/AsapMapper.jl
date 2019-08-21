@@ -56,14 +56,7 @@ abstract type MapConstructor end
 # Custom Architecture used by this Framework
 ################################################################################
 
-# Invariants on the type:
-#
-# - Frequency and Multi are concrete Bool and cannot both be `true`.
-abstract type AbstractKC <: RuleSet end
-
-struct KC <: AbstractKC end
-struct Asap2 <: AbstractKC end
-
+include("Mapper2_Interface.jl")
 include("Helper.jl")
 include("Metadata.jl")
 
@@ -72,10 +65,8 @@ include("cad_models/cad_models.jl")
 #include("experimental_models/experimental_models.jl")
 #include("models/models.jl")
 
-# Include files
 include("PM_Interface/PM_Interface.jl")
 include("Simulator_Interface.jl")
-include("Mapper2_Interface.jl")
 
 # Customize placement/routing plus architectures.
 include("PNR.jl")
@@ -118,5 +109,21 @@ function parallel_map_and_save(input_file, output_dir, num_mappings)
 end
 
 report_routing_stats(m::Map) = Mapper2.MapperCore.report_routing_stats(m)
+
+function approximate_energy(m::Map)
+    taskgraph = m.taskgraph
+    total = 0
+    for (index, edge) in enumerate(getedges(taskgraph))
+        # Get the number of reads
+        measurements = edge.metadata["measurements_dict"]
+        reads = get(measurements, "num_reads", nothing)
+        isnothing(reads) && continue
+
+        # Get the total number of links used for this edge
+        links = Mapper2.MapperCore.count_global_links(getpath(m, index))
+        total += reads * links
+    end
+    return total
+end
 
 end # module

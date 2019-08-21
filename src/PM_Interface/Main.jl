@@ -234,8 +234,6 @@ function build_map(c::PMConstructor)
     return m
 end
 
-build_aux(map::Map{D,Asap2}) where D = MutableBinaryMaxHeap(zeros(UInt8, num_edges(map.taskgraph)))
-
 # Placement for Asap2
 function asap_pnr(m::Map{D,Asap2}; kwargs...) where {D}
     for _ in 1:m.options[:num_retries]
