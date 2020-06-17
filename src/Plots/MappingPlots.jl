@@ -33,7 +33,7 @@ end
     # Unpack map
     #map = r.map
     #plot_route = r.plot_route
-    
+
 
     # Set up parameters
     spacing = 10
@@ -108,12 +108,17 @@ function getboxes(m::Map{2})
     return boxes
 end
 
+function iscongested(edge::Mapper2.TaskgraphEdge)
+    metadata = edge.metadata
+    return get(metadata, "iscongested", false)
+end
+
 function getroutes(m::Map{2})
     a = m.toplevel
     style = a.metadata["style"]
 
     routes = DrawRoute[]
-    for graph in m.mapping.edges
+    for (edge_index, graph) in enumerate(m.mapping.edges)
         x = Float64[]
         y = Float64[]
         for path in Mapper2.MapperGraphs.linearize(graph)
@@ -130,12 +135,16 @@ function getroutes(m::Map{2})
             push!(y, y0 + get(metadata, "y", 0.5))
         end
         # Choose color based on length of path
-        if length(x) <= 2
+        edge = getedge(m.taskgraph, edge_index)
+
+        if iscongested(edge)
+            color = :red
+        elseif length(x) <= 2
             color = :black
         elseif length(x) <= 5
             color = :blue
         else
-            color = :red
+            color = :green
         end
         # Add this route to the routes vector
         push!(routes, DrawRoute(x, y, color))
