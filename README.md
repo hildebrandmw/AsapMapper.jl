@@ -4,7 +4,7 @@
 [![codecov.io](https://codecov.io/gh/hildebrandmw/AsapMapper.jl/graphs/badge.svg?branch=master)](https://codecov.io/gh/hildebrandmw/AsapMapper.jl)
 [![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
 
-This is the KiloCore specific code for the KilCore mapping project.
+This is the KiloCore specific code for the KiloCore mapping project.
 
 Items that go in here include:
 
