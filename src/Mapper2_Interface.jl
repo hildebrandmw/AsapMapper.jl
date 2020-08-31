@@ -162,7 +162,7 @@ Base.@propagate_inbounds function SA.unsafe_assign(
 end
 
 # Apply a high global penalty for the longest link length
-Mapper2.SA.aux_cost(sa_struct::SAStruct{Asap2}) = 512.0 * top(sa_struct.aux)
+Mapper2.SA.aux_cost(sa_struct::SAStruct{Asap2}) = 512.0 * first(sa_struct.aux)
 
 ################################################################################
 # Routing
