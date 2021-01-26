@@ -90,6 +90,8 @@ function place_and_route(profile_path, dump_path)
     end
     # Dump mapping to given dump path
     dump_map(m, dump_path)
+    # Return the mapping object for possible later plotting
+    return m
 end
 
 function parallel_map_and_save(input_file, output_dir, num_mappings)
